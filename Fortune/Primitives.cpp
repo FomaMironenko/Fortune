@@ -202,8 +202,8 @@ void Point:: get()
 }
 bool Point:: operator==(Point & other) { return (this->end.first == other.end.first && this->end.second == other.end.second); }
 bool Point:: operator!=(Point & other) { return !(*this == other); }
-bool Point:: operator >(Point & other) { return (this->end.first > other.end.first || (this->end.first == other.end.second && this->end.second > other.end.second)); }
-bool Point:: operator <(Point & other) { return (this->end.first < other.end.second || (this->end.first == other.end.second && this->end.second < other.end.second)); }
+bool Point:: operator >(Point & other) { return (this->end.second < other.end.second || (this->end.second == other.end.second && this->end.first > other.end.first)); }
+bool Point:: operator <(Point & other) { return (this->end.second > other.end.second || (this->end.second == other.end.second && this->end.first < other.end.first)); }
 bool Point:: operator>=(Point & other) { return !(*this < other); }
 bool Point:: operator<=(Point & other) { return !(*this > other); }
 //builds a vector from the point
@@ -213,7 +213,14 @@ void Point:: print(bool nice)
 {
 	if (nice)
 	{
-		cout << "(" << this->end.first << ", " << this->end.second << ") ";
+		if (this->end.first == numeric_limits<double>::max() || this->end.second == numeric_limits<double>::max())
+		{
+			cout << "(inf, inf) ";
+		}
+		else
+		{
+			cout << "(" << this->end.first << ", " << this->end.second << ") ";
+		}
 	}
 	else
 	{
@@ -221,6 +228,21 @@ void Point:: print(bool nice)
 	}
 }
 MyDouble Point:: polar_ang(Point p1, Point p2) { return (p1 - *this) ^ (p2 - *this); }
+MyDouble & Point:: x()
+{
+	return this->end.first;
+}
+MyDouble & Point:: y()
+{
+	return this->end.second;
+}
+istream & operator>>(istream & cin, Point & pnt)
+{
+	cin >> pnt.end.first >> pnt.end.second;
+	pnt.start.first = pnt.start.second = 0;
+	return cin;
+}
+
 //////////////////// ################### \\\\\\\\\\\\\\\\\\\\
 
 
