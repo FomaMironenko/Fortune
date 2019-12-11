@@ -1,22 +1,12 @@
 #ifndef PRIMS
 #define PRIMS
 
-#ifndef PCH
-	#define PCH
-	#include "pch.h"
-#endif
-#ifndef IOSTREAM
-	#define IOSTREAM
-	#include <iostream>
-#endif
-#ifndef ALGORITHM
-	#define ALGORITHM
-	#include <algorithm>
-#endif
-#ifndef VECTOR
-	#define VECTOR
-	#include <vector>
-#endif
+
+#include "pch.h"
+#include <iostream>
+#include <algorithm>
+#include <vector>
+
 
 using namespace std;
 
@@ -104,7 +94,7 @@ struct Segment
 	void print();
 	bool between(Point);
 	bool contain(Point);
-	//пересечение отрезков
+	//ГЇГҐГ°ГҐГ±ГҐГ·ГҐГ­ГЁГҐ Г®ГІГ°ГҐГ§ГЄГ®Гў
 	bool cross(Segment);
 
 	pair<MyDouble, MyDouble> start;
