@@ -90,7 +90,7 @@ bool MyDouble:: operator==(MyDouble & other) { return abs(*this - other) < eps; 
 bool MyDouble:: operator<=(MyDouble & other) { return *this < other + eps; }
 bool MyDouble:: operator>=(MyDouble & other) { return *this > other - eps; }
 bool MyDouble:: operator <(MyDouble & other) { return *this < other - eps; }
-bool MyDouble:: operator >(MyDouble & other) { return *this < other + eps; }
+bool MyDouble:: operator >(MyDouble & other) { return *this > other + eps; }
 
 istream & operator>>(istream & cin, MyDouble & num)
 {
