@@ -9,9 +9,12 @@
 
 struct Beachline
 {
+	Beachline()
+	{	}
 
 
-	set<Event> chain;
+
+	set<BL*> chain;
 };
 
 
@@ -24,27 +27,32 @@ void set_diagram()
 	myq events;
 	voronoy.get(events);
 
-	
+	Beachline front;
+
+
+	cout << "\n";
+	voronoy.print();
 }
 
 
 
 int main()
 {
-	Comp cmp;
-	priority_queue<Event*, vector<Event*>, Comp> Q;
-	NewSite* a = new NewSite(5);
-	a->vertex = Point(5, 5);
-	Q.push(a);
-	Event* tmp = Q.top();
-	if (tmp->tp == site)
+	//set_diagram();
+	set<BL*, BComp> Q;
+	Arc* t1 = new Arc(4.5);
+	Arc* t2 = new Arc(2.6);
+	Arc* t3 = new Arc(7);
+	Q.insert(t1);
+	Q.insert(t2);
+	Q.insert(t3);
+	for (auto it = Q.begin(); it != Q.end(); it++)
 	{
-		cout << "hi";
-		((NewSite*)tmp)->vertex.print();
+		if ((*it)->tp == arc)
+		{
+			cout << (*it)->x << " ";
+		}
 	}
-	
-
-	
 
 
 	// CHECK THIS OUT
