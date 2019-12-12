@@ -5,8 +5,23 @@
 #include "objects.h"
 
 
+//сначала будет идти ev2
+bool Comp:: operator() (Event* ev1, Event* ev2) { return *ev1 > *ev2; }
+bool BComp::operator() (BL* bl1, BL* bl2) { return *bl1 < *bl2; }
+
 ///////////////		PARABOLA	\\\\\\\\\\\\\\\
 
+///////////////	############### \\\\\\\\\\\\\\\
+
+
+
+
+///////////////		  BL	   \\\\\\\\\\\\\\\
+
+bool BL::operator <(BL & other)
+{
+	return this->x < other.x;
+}
 ///////////////	############### \\\\\\\\\\\\\\\
 
 
@@ -42,36 +57,36 @@ void Locus::print()
 
 ///////////////     Diagram	    \\\\\\\\\\\\\\\
 
-Diagram:: Diagram(int n)
+Diagram:: Diagram(int n): n(n)
 {
-	faces = vector<Locus>(n);
+	faces = vector<Locus*>(n);
 	for (int i = 0; i < n; i++)
 	{
-		faces[i].centre.get();
+		faces[i] = new Locus;
+		faces[i]->centre.get();
 	}
 }
 void Diagram:: get(myq & Q)
 {
 	Point tmp;
-	Locus face;
-	NewSite* Nsite;
-	int n = 0;
 	while (cin >> tmp)
 	{
-		face.centre = tmp;
-		//copies fields
-		faces.push_back(face);
-		Nsite = new NewSite(tmp.x());
-		Q.push();
+		Locus* face = new Locus;
+		face->centre = tmp;
+		faces.push_back(face);  //copies fields
+		NewSite* nsite = new NewSite(tmp.y(), tmp);
+		nsite->face = face;
+		Q.push(nsite);
+		n++;
 	}
 	cin.clear();
-	this->n = n;
 }
 void Diagram:: print()
 {
 	for (auto it = faces.begin(); it < faces.end(); it++)
 	{
-		it->print();
+		(*it)->print();
+		cout << endl;
 	}
 }
 ///////////////	############### \\\\\\\\\\\\\\\
@@ -81,8 +96,11 @@ void Diagram:: print()
 
 ///////////////		  EVENT	    \\\\\\\\\\\\\\\
 
-bool Event:: operator<(Event & other) { return this->y > other.y; }
-bool Event:: operator>(Event & other) { return this->y < other.y; }
+bool Event:: operator==(Event & other) { return this->y == other.y && this->vertex == other.vertex; }
+bool Event:: operator <(Event & other) { return this->y > other.y || this->y == other.y && this->vertex < other.vertex; }
+bool Event:: operator >(Event & other) { return this->y < other.y || this->y == other.y && this->vertex > other.vertex; }
+bool Event:: operator>=(Event & other) { return !(*this < other); }
+bool Event:: operator<=(Event & other) { return !(*this > other); }
 ///////////////	############### \\\\\\\\\\\\\\\
 
 
