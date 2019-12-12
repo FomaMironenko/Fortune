@@ -7,62 +7,84 @@
 #include "pch.h"
 #include <iostream>
 #include <algorithm>
+#include <queue>
 #include <list>
 
 using namespace std;
 
-//компаратор для приоритетной очереди
-struct Comp
-{
-	bool operator()(Event* ev1, Event*ev2)
-	{
-		return *ev1 < *ev2;
-	}
-};
-
-typedef priority_queue<Event*, vector<Event*>, Comp> myq;
-
-
-
 
 struct Parabola;
+struct BL;
+struct Arc;
 struct Edge;
 struct Locus;
+struct Diagram;
 struct Event;
 struct NewSite;
 struct ArcInter;
+
+//РєРѕРјРїР°СЂР°С‚РѕСЂ РґР»СЏ РїСЂРёРѕСЂРёС‚РµС‚РЅРѕР№ РѕС‡РµСЂРµРґРё
+struct Comp
+{
+	bool operator()(Event*, Event*);
+};
+struct BComp
+{
+	bool operator()(BL*, BL*);
+};
+typedef priority_queue<Event*, vector<Event*>, Comp> myq;
 
 
 struct Parabola
 {
 
 	Point focus;
-	MyDouble* sweep; // y coordinate
 };
 
 
 // Components of beachline //
-struct Arc
+enum btype {arc, edg};
+struct BL
 {
+	BL(): valid(true)
+	{	}
+	BL(MyDouble x): x(x)
+	{	}
+	bool operator <(BL & other);
+
+	bool valid;
+	MyDouble x;
+	btype tp;
+};
+
+
+struct Arc: BL
+{
+	Arc(): BL()
+	{ this->tp = arc; }
+	Arc(MyDouble x): BL(x)
+	{ this->tp = arc; }
 
 	Parabola curve;
 	Point start;
-	bool valid;
 };
 
-struct Edge
+struct Edge: BL
 {
+	Edge() : BL()
+	{ this->tp = edg; }
+	Edge(MyDouble x) : BL(x)
+	{ this->tp = edg; }
 
 	Segment edge;
 	Locus* face;
-	bool valid;
 };
 /////////////////////////////
 
 
 struct Locus
 {
-	Locus(): centre(Point()), vertexes(list<Point>(0))
+	Locus(): centre(Point(0, 0))
 	{	
 		//an infinity point
 		vertexes.push_back(Point(numeric_limits<double>::max(), numeric_limits<double>::max()));
@@ -77,14 +99,13 @@ struct Locus
 
 struct Diagram
 {
-	Diagram() {    };
-	Diagram();
+	Diagram(): n(0) {    };
 	Diagram(int n);
 	void get(myq & Q);
 	void print();
 	
 	int n;
-	vector<Locus> faces;
+	vector<Locus*> faces;
 };
 
 
@@ -92,16 +113,21 @@ enum type{site, inter};
 
 struct Event
 {
-	Event()
+	Event(): valid(true)
 	{	}
-	Event(MyDouble y): y(y)
-	{	}
-
+	Event(MyDouble y, Point pnt): y(y), valid(true)
+	{	
+		vertex = Point(pnt.x(), pnt.y());
+	}
+	bool operator==(Event & other);
 	bool operator <(Event & other);
 	bool operator >(Event & other);
+	bool operator>=(Event & other);
+	bool operator<=(Event & other);
 
 
 	type tp;
+	Point vertex;
 	MyDouble y;
 	bool valid;
 };
@@ -109,23 +135,22 @@ struct Event
 struct NewSite : Event
 {
 	NewSite(): Event()
-	{	this->tp = site;	}
-	NewSite(MyDouble y): Event(y)
-	{	this->tp = site;	}
+	{ this->tp = site; }
+	NewSite(MyDouble y, Point pnt): Event(y, pnt)
+	{ this->tp = site; }
 
-	Edge e1;
-	Edge e2;
-	Point vertex;
+	Locus* face;
 };
 
 struct ArcInter : Event
 {
 	ArcInter(): Event()
 	{	this->tp = inter;	}
-	ArcInter(MyDouble y) : Event(y)
+	ArcInter(MyDouble y, Point pnt) : Event(y, pnt)
 	{	this->tp = inter;	}
 
-
+	Edge e1;
+	Edge e2;
 };
 
 
