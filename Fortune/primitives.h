@@ -94,7 +94,7 @@ struct Segment
 	void print();
 	bool between(Point);
 	bool contain(Point);
-	//ïåðåñå÷åíèå îòðåçêîâ
+	//пересечение отрезков
 	bool cross(Segment);
 
 	pair<MyDouble, MyDouble> start;
@@ -120,6 +120,9 @@ struct Point : Segment
 	Segment operator <<(Segment);
 	void print(bool nice = true);
 	MyDouble polar_ang(Point, Point);
+	MyDouble & x();
+	MyDouble & y();
+	friend istream& operator>>(istream&, Point&);
 };
 
 struct Line
