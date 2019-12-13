@@ -29,6 +29,25 @@ bool BL::operator <(BL & other)
 
 ///////////////	      EDGE      \\\\\\\\\\\\\\\
 
+void Edge::unvalidate()
+{
+	if (inter != nullptr)
+	{
+		inter->valid = false;
+	}
+}
+Edge:: ~Edge()
+{
+	unvalidate();
+}
+
+///////////////	############### \\\\\\\\\\\\\\\
+
+
+
+
+///////////////	      Arc       \\\\\\\\\\\\\\\
+
 ///////////////	############### \\\\\\\\\\\\\\\
 
 
@@ -74,7 +93,7 @@ void Diagram:: get(myq & Q)
 		Locus* face = new Locus;
 		face->centre = tmp;
 		faces.push_back(face);  //copies fields
-		NewSite* nsite = new NewSite(tmp.y(), tmp);
+		SiteEvent* nsite = new SiteEvent(tmp.y(), tmp);
 		nsite->face = face;
 		Q.push(nsite);
 		n++;
