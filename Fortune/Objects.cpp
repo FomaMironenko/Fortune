@@ -7,7 +7,6 @@
 
 //сначала будет идти ev2
 bool Comp:: operator() (Event* ev1, Event* ev2) { return *ev1 > *ev2; }
-bool BComp::operator() (BL* bl1, BL* bl2) { return *bl1 < *bl2; }
 
 ///////////////		PARABOLA	\\\\\\\\\\\\\\\
 
@@ -16,11 +15,11 @@ bool BComp::operator() (BL* bl1, BL* bl2) { return *bl1 < *bl2; }
 
 
 
-///////////////		  BL	   \\\\\\\\\\\\\\\
+///////////////	      Arc       \\\\\\\\\\\\\\\
 
-bool BL::operator <(BL & other)
+Arc:: Arc(SiteEvent* ev)
 {
-	return this->x < other.x;
+	face = ev->face;
 }
 ///////////////	############### \\\\\\\\\\\\\\\
 
@@ -29,6 +28,14 @@ bool BL::operator <(BL & other)
 
 ///////////////	      EDGE      \\\\\\\\\\\\\\\
 
+Edge:: Edge(Segment guide) : inter(nullptr)
+{
+	edge = guide;
+}
+Edge:: Edge(Arc* left, Arc* right)
+{
+
+}
 void Edge::unvalidate()
 {
 	if (inter != nullptr)
@@ -40,13 +47,6 @@ Edge:: ~Edge()
 {
 	unvalidate();
 }
-
-///////////////	############### \\\\\\\\\\\\\\\
-
-
-
-
-///////////////	      Arc       \\\\\\\\\\\\\\\
 
 ///////////////	############### \\\\\\\\\\\\\\\
 
@@ -125,13 +125,94 @@ bool Event:: operator<=(Event & other) { return !(*this > other); }
 
 
 
-///////////////		NEW SITE	\\\\\\\\\\\\\\\
+///////////////	  SITE EVENT	\\\\\\\\\\\\\\\
 
 ///////////////	############### \\\\\\\\\\\\\\\
 
 
 
 
-///////////////		ARC INTER	\\\\\\\\\\\\\\\
+///////////////	  CIRC EVENT	\\\\\\\\\\\\\\\
 
+///////////////	############### \\\\\\\\\\\\\\\
+
+
+
+
+///////////////	      NODE     	\\\\\\\\\\\\\\\
+
+
+Node::Node(SiteEvent* evt, Node* father, Edge* ledge, Edge* redge):
+	ledge(ledge), redge(redge), left(nullptr), right(nullptr), father(father)
+{
+	Arc* tmp = new Arc(evt);
+}
+Node:: ~Node()
+{
+	delete arc;
+	delete ledge;
+	delete redge;
+}
+///////////////	############### \\\\\\\\\\\\\\\
+
+
+
+
+///////////////	       AVL	   \\\\\\\\\\\\\\\
+
+AVL:: AVL(SiteEvent* first, myq* events) : events(events)
+{
+	Node* tmp = new Node();
+}
+void AVL::balance(Node* cur)
+{
+
+}
+Node* AVL::find(MyDouble x)
+{
+
+}
+void AVL:: insert(Edge* edge, SiteEvent* evt)
+{
+
+}
+void AVL:: insert(SiteEvent* evt)
+{
+
+}
+void AVL:: del(CircEvent* evt)
+{
+	Node* cur = evt->arcnode;
+
+	Node* leftnode = cur->ledge->left;
+	Node* rightnode = cur->redge->right;
+	Edge* newedge = new Edge(leftnode->arc, rightnode->arc);
+	newedge->left = leftnode;
+	newedge->right = rightnode;
+	leftnode->redge = newedge;
+	rightnode->ledge = newedge;
+
+	CircEvent* newevt = new CircEvent(leftnode);
+	if (newevt != nullptr)
+	{
+		events->push(newevt);
+	}
+	else
+	{
+		delete newevt;
+	}
+	newevt = new CircEvent(rightnode);
+	if (newevt != nullptr)
+	{
+		events->push(newevt);
+	}
+	else
+	{
+		delete newevt;
+	}
+
+	cur->arc->face->add(evt->vertex);
+	
+	_del(evt);
+}
 ///////////////	############### \\\\\\\\\\\\\\\
