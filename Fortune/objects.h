@@ -20,14 +20,15 @@ struct Edge;
 struct Locus;
 struct Diagram;
 struct Event;
-struct NewSite;
-struct ArcInter;
+struct SiteEvent;
+struct CircEvent;
 
-//компаратор для приоритетной очереди
+// компаратор для приоритетной очереди
 struct Comp
 {
 	bool operator()(Event*, Event*);
 };
+// компаратор для береговой линии
 struct BComp
 {
 	bool operator()(BL*, BL*);
@@ -35,10 +36,18 @@ struct BComp
 typedef priority_queue<Event*, vector<Event*>, Comp> myq;
 
 
+
+
 struct Parabola
 {
+	Parabola()
+	{	}
+	Parabola(Locus* focus): focus(focus)
+	{	}
 
-	Point focus;
+
+	//the face with the focus
+	Locus* focus;
 };
 
 
@@ -51,6 +60,7 @@ struct BL
 	BL(MyDouble x): x(x)
 	{	}
 	bool operator <(BL & other);
+
 
 	bool valid;
 	MyDouble x;
@@ -66,18 +76,21 @@ struct Arc: BL
 	{ this->tp = arc; }
 
 	Parabola curve;
-	Point start;
 };
 
 struct Edge: BL
 {
-	Edge() : BL()
+	Edge() : BL(), inter(nullptr)
 	{ this->tp = edg; }
-	Edge(MyDouble x) : BL(x)
+	Edge(MyDouble x) : BL(x), inter(nullptr)
 	{ this->tp = edg; }
 
+	void unvalidate();
+	~Edge();
+
+	// пересечение с другим ребром
+	CircEvent* inter;
 	Segment edge;
-	Locus* face;
 };
 /////////////////////////////
 
@@ -109,7 +122,7 @@ struct Diagram
 };
 
 
-enum type{site, inter};
+enum type{site, circ};
 
 struct Event
 {
@@ -132,25 +145,25 @@ struct Event
 	bool valid;
 };
 
-struct NewSite : Event
+struct SiteEvent : Event
 {
-	NewSite(): Event()
+	SiteEvent(): Event()
 	{ this->tp = site; }
-	NewSite(MyDouble y, Point pnt): Event(y, pnt)
+	SiteEvent(MyDouble y, Point pnt): Event(y, pnt)
 	{ this->tp = site; }
 
 	Locus* face;
 };
 
-struct ArcInter : Event
+struct CircEvent : Event
 {
-	ArcInter(): Event()
-	{	this->tp = inter;	}
-	ArcInter(MyDouble y, Point pnt) : Event(y, pnt)
-	{	this->tp = inter;	}
+	CircEvent(): Event()
+	{	this->tp = circ;	}
+	CircEvent(MyDouble y, Point pnt) : Event(y, pnt)
+	{	this->tp = circ;	}
 
-	Edge e1;
-	Edge e2;
+	Edge* eleft;
+	Edge* eright;
 };
 
 
