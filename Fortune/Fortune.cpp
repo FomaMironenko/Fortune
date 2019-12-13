@@ -7,47 +7,39 @@
 #include "objects.h"
 
 
+
 struct Beachline
 {
 	Beachline()
 	{	}
-	Beachline(myq* ev): events(ev)
-	{	}
+	Beachline(myq* evts, SiteEvent* first): events(evts)
+	{	
+		tree = AVL(first, events);
+	}
 
-
-
-	void process_edge(SiteEvent* ev)
+	// несколько верхних точек
+	void preprocess(Point prev, SiteEvent* evt)
 	{
-		Edge* new_edge = new Edge(ev->vertex.x());
+		Point cur = evt->face->centre;
+		// prev.y() == cur.y() == evt->y
+		Segment tmp((prev.x() + cur.x()) / 2, prev.y(), (prev.x() + cur.x()) / 2, prev.y() - 1.0);
+		Edge* edg = new Edge(tmp);
+		tree.insert(edg, evt);
+	}
 
+	void process_site(SiteEvent* evt)
+	{
+		tree.insert(evt);
+	}
+
+	void process_circ(CircEvent* evt)
+	{
+		tree.del(evt);
 	}
 
 
-
-	// поиск по x координате
-	void find()
-	{
-
-	}
-	// добавление элемента в береговую линию
-	void add()
-	{
-
-	}
-	// удаление элемента
-	void reduce()
-	{
-	
-	}
-
-	void do_arc_inter()
-	{
-
-	}
-
-
+	AVL tree;
 	myq* events;
-	set<BL*> chain;
 };
 
 
@@ -58,34 +50,42 @@ void set_diagram()
 	Diagram voronoy;
 	Comp cmp;
 	myq events;
+	//adds SiteEvents
 	voronoy.get(events);
 
-	Beachline front;
-	Event* cur;
-	Event* tmp;
+	Event *cur, *tmp;
 	cur = events.top();
 	events.pop();
-	// пока что все события - site event для точек
-	while (!events.empty() && (tmp = (SiteEvent*)events.top())->y == cur->y)
+	Beachline front(&events, (SiteEvent*)cur);
+	tmp = cur;
+	// пока что все события - SiteEvent для точек
+	// обработка случая: несколько верхних точек
+	while (!events.empty() && (cur = (SiteEvent*)events.top())->y == tmp->y)
 	{
-		front.process_edge((SiteEvent*)tmp);
+		// tmp->vertex - предыдущая вершина
+		front.preprocess(tmp->vertex, (SiteEvent*)cur);
 		events.pop();
 		delete tmp;
+		tmp = cur;
 	}
+	delete tmp;
 
 	while (!events.empty())
 	{
-		tmp = events.top();
+		cur = events.top();
 		events.pop();
-		if (tmp->tp == site)
+		if (cur->valid)
 		{
-			front.process_site((SiteEvent*)tmp);
+			if (cur->tp == site)
+			{
+				front.process_site((SiteEvent*)cur);
+			}
+			else
+			{
+				front.process_circ((CircEvent*)cur);
+			}
 		}
-		else
-		{
-			front.process_edge();
-		}
-
+		delete cur;
 	}
 
 	cout << "\n";
@@ -97,21 +97,6 @@ void set_diagram()
 int main()
 {
 	//set_diagram();
-	set<BL*, BComp> Q;
-	Arc* t1 = new Arc(4.5);
-	Arc* t2 = new Arc(2.6);
-	Arc* t3 = new Arc(7);
-	Q.insert(t1);
-	Q.insert(t2);
-	Q.insert(t3);
-	for (auto it = Q.begin(); it != Q.end(); it++)
-	{
-		if ((*it)->tp == arc)
-		{
-			cout << (*it)->x << " ";
-		}
-	}
-
 
 	// CHECK THIS OUT
 	//Point a(1, 2);
