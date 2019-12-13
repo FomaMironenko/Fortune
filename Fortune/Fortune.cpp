@@ -11,9 +11,42 @@ struct Beachline
 {
 	Beachline()
 	{	}
+	Beachline(myq* ev): events(ev)
+	{	}
 
 
 
+	void process_edge(SiteEvent* ev)
+	{
+		Edge* new_edge = new Edge(ev->vertex.x());
+
+	}
+
+
+
+	// поиск по x координате
+	void find()
+	{
+
+	}
+	// добавление элемента в береговую линию
+	void add()
+	{
+
+	}
+	// удаление элемента
+	void reduce()
+	{
+	
+	}
+
+	void do_arc_inter()
+	{
+
+	}
+
+
+	myq* events;
 	set<BL*> chain;
 };
 
@@ -28,7 +61,32 @@ void set_diagram()
 	voronoy.get(events);
 
 	Beachline front;
+	Event* cur;
+	Event* tmp;
+	cur = events.top();
+	events.pop();
+	// пока что все события - site event для точек
+	while (!events.empty() && (tmp = (SiteEvent*)events.top())->y == cur->y)
+	{
+		front.process_edge((SiteEvent*)tmp);
+		events.pop();
+		delete tmp;
+	}
 
+	while (!events.empty())
+	{
+		tmp = events.top();
+		events.pop();
+		if (tmp->tp == site)
+		{
+			front.process_site((SiteEvent*)tmp);
+		}
+		else
+		{
+			front.process_edge();
+		}
+
+	}
 
 	cout << "\n";
 	voronoy.print();
@@ -64,7 +122,7 @@ int main()
 }
 
 /*
-1) При добавлении NewSite события если х координата точки совпадает с
+1) При добавлении SiteEvent события если х координата точки совпадает с
 х координатой пересечения каих-то двух параболических дуг,
 то эта точка пересечения - новая вершина диаграмы. Можно не выделять этот 
 случай в отдельный
