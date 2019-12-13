@@ -13,8 +13,6 @@
 using namespace std;
 
 
-struct Parabola;
-struct BL;
 struct Arc;
 struct Edge;
 struct Locus;
@@ -22,75 +20,46 @@ struct Diagram;
 struct Event;
 struct SiteEvent;
 struct CircEvent;
+struct Node;
+struct AVL;
 
 // компаратор для приоритетной очереди
 struct Comp
 {
 	bool operator()(Event*, Event*);
 };
-// компаратор для береговой линии
-struct BComp
-{
-	bool operator()(BL*, BL*);
-};
 typedef priority_queue<Event*, vector<Event*>, Comp> myq;
 
 
 
-
-struct Parabola
-{
-	Parabola()
-	{	}
-	Parabola(Locus* focus): focus(focus)
-	{	}
-
-
-	//the face with the focus
-	Locus* focus;
-};
-
-
 // Components of beachline //
-enum btype {arc, edg};
-struct BL
+// arc with parabola interface
+struct Arc
 {
-	BL(): valid(true)
-	{	}
-	BL(MyDouble x): x(x)
-	{	}
-	bool operator <(BL & other);
+	Arc()
+	{    }
+	Arc(SiteEvent* ev);
 
-
-	bool valid;
-	MyDouble x;
-	btype tp;
+	Locus* face;
 };
 
-
-struct Arc: BL
+struct Edge
 {
-	Arc(): BL()
-	{ this->tp = arc; }
-	Arc(MyDouble x): BL(x)
-	{ this->tp = arc; }
+	Edge(): inter(nullptr)
+	{	 }
+	Edge(Segment guide);
+	//Edge(Arc* left, Arc* right);
 
-	Parabola curve;
-};
-
-struct Edge: BL
-{
-	Edge() : BL(), inter(nullptr)
-	{ this->tp = edg; }
-	Edge(MyDouble x) : BL(x), inter(nullptr)
-	{ this->tp = edg; }
-
+	// сначала удаляюися рёбра - потом соотвествующее им событие
 	void unvalidate();
 	~Edge();
 
+	Segment edge;
+	//!! случай если пересечений несколько
 	// пересечение с другим ребром
 	CircEvent* inter;
-	Segment edge;
+	Node* left;
+	Node* right;
 };
 /////////////////////////////
 
@@ -140,7 +109,7 @@ struct Event
 
 
 	type tp;
-	Point vertex;
+	Point vertex; // точка где происходит событие. Для CircEvent её координаты могут  отличаться от координаты sweepline
 	MyDouble y;
 	bool valid;
 };
@@ -162,8 +131,50 @@ struct CircEvent : Event
 	CircEvent(MyDouble y, Point pnt) : Event(y, pnt)
 	{	this->tp = circ;	}
 
-	Edge* eleft;
-	Edge* eright;
+
+	Node* arcnode;
+};
+
+
+// beachline struct //
+struct Node
+{
+	Node(): ledge(nullptr), redge(nullptr), left(nullptr), right(nullptr), father(nullptr)
+	{	}
+	Node(SiteEvent* arc, Node* father = nullptr, Edge* ledge = nullptr, Edge* redge = nullptr);
+
+	~Node();
+	Arc* arc;
+	// list structure
+	Edge* ledge;
+	Edge* redge;
+	// tree structure
+	Node* left;
+	Node* right;
+	Node* father;
+	int rw;
+	int lw;
+
+	myq* events;
+};
+
+struct AVL
+{
+	AVL()
+	{	}
+	AVL(SiteEvent* first, myq* events);
+
+	void balance(Node* cur);
+	Node* find(MyDouble x);
+	// для Beachline:: preprocess. Вставляет дугу как самый правый узел
+	void insert(Edge* edge, SiteEvent* evt);
+	// должен созавать два ребра и добавлять в очередь события их пересечения с соседними
+	// создаёт CircEvent
+	void insert(SiteEvent* evt);
+	void del(CircEvent* evt);
+
+	Node* root;
+	myq* events;
 };
 
 
