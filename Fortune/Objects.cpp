@@ -8,11 +8,17 @@
 //сначала будет идти ev2
 bool Comp:: operator() (Event* ev1, Event* ev2) { return *ev1 > *ev2; }
 
-///////////////		PARABOLA	\\\\\\\\\\\\\\\
-
-///////////////	############### \\\\\\\\\\\\\\\
 
 
+pair<MyDouble, MyDouble> solve_square(MyDouble a, MyDouble b, MyDouble c)
+{
+	if (a == 0)
+	{
+		// not considered: b == 0
+		return pair<MyDouble, MyDouble>(-c/b, -c/b);
+	}
+	return pair<MyDouble, MyDouble>((-b - sqrt(b*b - 4*a*c))/2, (-b + sqrt(b*b - 4*a*c))/2);
+}
 
 
 ///////////////	      Arc       \\\\\\\\\\\\\\\
@@ -21,6 +27,38 @@ Arc:: Arc(SiteEvent* ev)
 {
 	face = ev->face;
 }
+Arc:: Arc(Locus* face)
+{
+	this->face = face;
+}
+pair<MyDouble, MyDouble> Arc::intersection(Arc & parab, MyDouble sweep)
+{
+	Point pnt1 = this->face->centre;
+	Point pnt2 = parab.face->centre;
+	if (pnt1.y() == sweep)
+	{
+		return pair<MyDouble, MyDouble>(pnt1.x(), pnt1.x());
+	}
+	if (pnt2.y() == sweep)
+	{
+		return pair<MyDouble, MyDouble>(pnt2.x(), pnt2.x());
+	}
+	MyDouble a = (pnt2.y() - pnt1.y()) / ((pnt1.y() - sweep)*(pnt2.y() - sweep));
+	MyDouble b = 2 * (pnt2.x() / (pnt2.y() - sweep) - pnt1.x() / (pnt1.y() - sweep));
+	MyDouble c = pnt1.y() - pnt2.y() + pnt1.x()*pnt1.x() / (pnt1.y() - sweep) - pnt2.x()*pnt2.x() / (pnt2.y() - sweep);
+	pair<MyDouble, MyDouble> tmp = solve_square(a, b, c);
+	return tmp;
+}
+MyDouble Arc:: left_inter(Arc & parab, MyDouble sweep)
+{
+	pair<MyDouble, MyDouble> tmp = this->intersection(parab, sweep);
+	return tmp.first;
+}
+MyDouble Arc:: right_inter(Arc & parab, MyDouble sweep)
+{
+	pair<MyDouble, MyDouble> tmp = this->intersection(parab, sweep);
+	return tmp.second;
+}
 ///////////////	############### \\\\\\\\\\\\\\\
 
 
@@ -28,7 +66,7 @@ Arc:: Arc(SiteEvent* ev)
 
 ///////////////	      EDGE      \\\\\\\\\\\\\\\
 
-Edge:: Edge(Segment guide) : inter(nullptr)
+Edge:: Edge(Segment guide) : inter(nullptr), left(nullptr), right(nullptr)
 {
 	edge = guide;
 }
@@ -120,6 +158,19 @@ bool Event:: operator <(Event & other) { return this->y > other.y || this->y == 
 bool Event:: operator >(Event & other) { return this->y < other.y || this->y == other.y && this->vertex > other.vertex; }
 bool Event:: operator>=(Event & other) { return !(*this < other); }
 bool Event:: operator<=(Event & other) { return !(*this > other); }
+// check case when cur is the ultimate arc
+bool Event:: operator <(Node* cur)
+{
+	return cur->left != nullptr || this->vertex.x() < cur->arc->left_inter(*cur->left->arc, this->y);
+}
+bool Event:: operator >(Node* cur)
+{
+	return cur->right != nullptr || this->vertex.x() > cur->arc->right_inter(*cur->right->arc, this->y);
+}
+bool Event:: operator==(Node* cur)
+{
+	return !(*this < cur) && !(*this > cur);
+}
 ///////////////	############### \\\\\\\\\\\\\\\
 
 
@@ -142,10 +193,15 @@ bool Event:: operator<=(Event & other) { return !(*this > other); }
 ///////////////	      NODE     	\\\\\\\\\\\\\\\
 
 
-Node::Node(SiteEvent* evt, Node* father, Edge* ledge, Edge* redge):
-	ledge(ledge), redge(redge), left(nullptr), right(nullptr), father(father)
+Node::Node(SiteEvent* evt, Edge* ledge, Edge* redge):
+	ledge(ledge), redge(redge), left(nullptr), right(nullptr), parent(nullptr), height(1)
 {
 	Arc* tmp = new Arc(evt);
+}
+Node::Node(Locus* face, Edge* ledge, Edge* redge) :
+	ledge(ledge), redge(redge), left(nullptr), right(nullptr), parent(nullptr), height(1)
+{
+	Arc* tmp = new Arc(face);
 }
 Node:: ~Node()
 {
@@ -153,34 +209,24 @@ Node:: ~Node()
 	delete ledge;
 	delete redge;
 }
-///////////////	############### \\\\\\\\\\\\\\\
-
-
-
-
-///////////////	       AVL	   \\\\\\\\\\\\\\\
-
-AVL:: AVL(SiteEvent* first, myq* events) : events(events)
+int Node:: get_height()
 {
-	Node* tmp = new Node();
+	return this != NULL ? this->height : 0;
 }
-void AVL::balance(Node* cur)
+int Node:: leftH()
 {
-
+	return this->left->get_height();
 }
-Node* AVL::find(MyDouble x)
+int Node:: rightH()
 {
-
+	return this->right->get_height();
 }
-void AVL:: insert(Edge* edge, SiteEvent* evt)
+int Node:: corr_height()
 {
-
+	return this->height = 1 + ::max(this->left->get_height(), this->right->get_height());
 }
-void AVL:: insert(SiteEvent* evt)
-{
 
-}
-void AVL:: del(CircEvent* evt)
+void Node:: rebind(CircEvent* evt)
 {
 	Node* cur = evt->arcnode;
 
@@ -210,9 +256,132 @@ void AVL:: del(CircEvent* evt)
 	{
 		delete newevt;
 	}
+}
+///////////////	############### \\\\\\\\\\\\\\\
 
-	cur->arc->face->add(evt->vertex);
-	
-	_del(evt);
+
+
+
+///////////////	       AVL	   \\\\\\\\\\\\\\\
+
+AVL:: AVL(SiteEvent* first, myq* events) : events(events)
+{
+	Node* tmp = new Node(first);
+}
+Node* AVL:: left_turn(Node* cur)
+{
+	//cur->right - cur->left = 2
+	Node* tmp = cur->right;
+	tmp->parent = cur->parent;
+	cur->parent = tmp;
+	if (tmp->left != nullptr)
+	{
+		tmp->left->parent = cur;
+	}
+	cur->right = tmp->left;
+	tmp->left = cur;
+	cur->height = cur->corr_height();
+	tmp->height = tmp->corr_height();
+	return tmp;
+}
+Node* AVL:: right_turn(Node* cur)
+{
+	//cur->right - cur->left = -2
+	Node* tmp = cur->left;
+	tmp->parent = cur->parent;
+	cur->parent = tmp;
+	if (tmp->right != nullptr)
+	{
+		tmp->right->parent = cur;
+	}
+	cur->left = tmp->right;
+	tmp->right = cur;
+	cur->height = cur->corr_height();
+	tmp->height = tmp->corr_height();
+	return tmp;
+}
+void AVL:: balance(Node** cur)
+{
+	//left turn
+	if (!*cur)
+		return;
+	if ((*cur)->rightH() - (*cur)->leftH() == 2)
+	{
+		if ((*cur)->right->leftH() > (*cur)->right->rightH())
+		{
+			(*cur)->right = right_turn((*cur)->right);
+		}
+		(*cur) = left_turn(*cur);
+	}
+
+	if ((*cur)->leftH() - (*cur)->rightH() == 2)
+	{
+		if ((*cur)->left->rightH() > (*cur)->left->leftH())
+		{
+			(*cur)->left = left_turn((*cur)->left);
+		}
+		(*cur) = right_turn(*cur);
+	}
+	(*cur)->height = (*cur)->corr_height();
+}
+void AVL:: up_balance(Node* cur)
+{
+	if (!cur)
+	{
+		return;
+	}
+	Node** tmp;
+	if (cur == root)
+	{
+		*tmp = root;
+	}
+	else
+	{
+		if (cur == cur->parent->left) { tmp = &(cur->parent->left); }
+		else { tmp = &(cur->parent->right); }
+	}
+
+	if (cur->rightH() - cur->leftH() == 2)
+	{
+		if (cur->right->leftH() > cur->right->rightH())
+		{
+			cur->right = right_turn(cur->right);
+		}
+		*tmp = left_turn(cur);
+	}
+	if (cur->leftH() - cur->rightH() == 2)
+	{
+		if (cur->left->rightH() > cur->left->leftH())
+		{
+			cur->left = left_turn(cur->left);
+		}
+		*tmp = right_turn(cur);
+	}
+	(*tmp)->height = (*tmp)->corr_height();
+	up_balance((*tmp)->parent);
+}
+void AVL:: insert_right(Segment & edg, SiteEvent* evt)
+{
+	_insert_right(&root, edg, evt);
+}
+void AVL:: _insert_right(Node** cur, Segment & edg, SiteEvent* evt)
+{
+	if (!(*cur)->right)
+	{
+		// tree
+		Edge* edge = new Edge(edg);
+		(*cur)->right = new Node(evt);
+		(*cur)->right->parent = *cur;
+		// list
+		(*cur)->redge = edge;
+		(*cur)->right->ledge = edge;
+		edge->left = *cur;
+		edge->right = (*cur)->right;
+	}
+	else
+	{
+		_insert_right(&((*cur)->right), edg, evt);
+	}
+	balance(cur);
 }
 ///////////////	############### \\\\\\\\\\\\\\\
