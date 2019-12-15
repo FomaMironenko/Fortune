@@ -23,8 +23,7 @@ struct Beachline
 		Point cur = evt->face->centre;
 		// prev.y() == cur.y() == evt->y
 		Segment tmp((prev.x() + cur.x()) / 2, prev.y(), (prev.x() + cur.x()) / 2, prev.y() - 1.0);
-		Edge* edg = new Edge(tmp);
-		tree.insert(edg, evt);
+		tree.insert_right(tmp, evt);
 	}
 
 	void process_site(SiteEvent* evt)
