@@ -139,27 +139,23 @@ MyDouble Segment:: operator *(Segment other) { return x_project()*other.x_projec
 //vector product
 MyDouble Segment::operator ^(Segment other) { return x_project()*other.y_project() - y_project()*other.x_project(); }
 
-MyDouble Segment:: len()
+MyDouble Segment::len()
 {
 	return MyDouble(sqrt((double)x_project()*(double)x_project() + (double)y_project()*(double)y_project()));
 }
-
 void Segment:: print()
 {
 	cout << "[(" << start.first << ", " << start.second << "),  (" <<
 		end.first << ", " << end.second << ")] ";
 }
-
 bool Segment:: between(Point pnt)
 {
 	return ((*this)*(Point(start) - pnt)) <= 0 && ((*this)*(Point(end) - pnt)) >= 0;
 }
-
 bool Segment:: contain(Point pnt)
 {
 	return this->between(pnt) && ((Point(start) - pnt) ^ (Point(end) - pnt)) == 0;
 }
-
 bool Segment:: cross(Segment other)
 {
 	Line l1(other);
@@ -174,6 +170,10 @@ bool Segment:: cross(Segment other)
 	}
 	Point a = (l1.intersection(l2));
 	return this->between(a) && other.between(a);
+}
+Segment Segment:: normalise()
+{
+	return Segment(start, pair<MyDouble, MyDouble>(start.first + x_project()/len(), start.second + y_project()/len()));
 }
 //////////////////// ################### \\\\\\\\\\\\\\\\\\\\
 
@@ -242,14 +242,12 @@ istream & operator>>(istream & cin, Point & pnt)
 	pnt.start.first = pnt.start.second = 0;
 	return cin;
 }
-
 //////////////////// ################### \\\\\\\\\\\\\\\\\\\\
 
 
 
 
 ////////////////////         LINE        \\\\\\\\\\\\\\\\\\\\
-
 
 Line:: Line(Segment guide)
 {
