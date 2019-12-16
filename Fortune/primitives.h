@@ -50,20 +50,24 @@ struct MyDouble
 	MyDouble();
 	MyDouble(double);
 	operator double() const;
+
 	MyDouble &operator =(const MyDouble&);
 	MyDouble operator +(double);
 	MyDouble operator+=(double);
 	MyDouble operator -();
 	MyDouble operator -(double);
 	MyDouble operator-=(double);
+
 	bool operator==(MyDouble &);
 	bool operator<=(MyDouble &);
 	bool operator>=(MyDouble &);
 	bool operator <(MyDouble &);
 	bool operator >(MyDouble &);
+
 	friend istream& operator>>(istream&, MyDouble&);
 	friend ostream& operator<<(ostream&, MyDouble&);
-	const double eps = 1e-6;
+
+	const double eps = 1e-5;
 	double value;
 };
 
@@ -76,6 +80,7 @@ struct Segment
 	Segment(Point, Point);
 	Segment(Segment const &);
 	Segment & operator=(Segment);
+
 	MyDouble x_project();
 	MyDouble y_project();
 	Segment operator +(Segment);
@@ -85,17 +90,18 @@ struct Segment
 	Segment operator-=(Segment);
 	Segment operator *(MyDouble);
 	Segment operator*=(MyDouble);
+
 	//scalar product
 	MyDouble operator *(Segment);
 	//vector product
 	MyDouble operator ^(Segment);
-
 	MyDouble len();
 	void print();
 	bool between(Point);
 	bool contain(Point);
 	//пересечение отрезков
 	bool cross(Segment);
+	Segment normalise();
 
 	pair<MyDouble, MyDouble> start;
 	pair<MyDouble, MyDouble> end;
@@ -110,12 +116,14 @@ struct Point : Segment
 	Point(Segment);
 	Point &operator=(Point);
 	void get();
+
 	bool operator==(Point &);
 	bool operator!=(Point &); 
 	bool operator >(Point &); 
 	bool operator <(Point &); 
 	bool operator>=(Point &); 
 	bool operator<=(Point &);
+
 	Segment operator >>(Segment);
 	Segment operator <<(Segment);
 	void print(bool nice = true);
@@ -127,16 +135,23 @@ struct Point : Segment
 
 struct Line
 {
+	// guiding vector
 	Line(Segment);
+	// two points
 	Line(Point, Point);
+	// point and normal
 	Line(Point, Segment);
 	MyDouble operator()(Point);
+
 	Point intersection(Line);
 	int parallel(Line);
 	MyDouble a;
 	MyDouble b;
 	MyDouble c;
 	Point pnt;
+	/*
+	ax + by + c = 0
+	*/
 };
 
 struct Polygon
@@ -144,6 +159,7 @@ struct Polygon
 	Polygon();
 	Polygon(vector<Point>);
 	Polygon(int);
+
 	struct Comp
 	{
 		Comp(Point);
