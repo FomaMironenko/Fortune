@@ -31,6 +31,8 @@ Arc:: Arc(Locus* face)
 {
 	this->face = face;
 }
+
+//((x - x1)^2) / (2*(y1 - yd)) + (y1 + yd)/2  =  ((x - x2)^2) / (2*(y2 - yd)) + (y2 + yd)/2
 pair<MyDouble, MyDouble> Arc::intersection(Arc & parab, MyDouble sweep)
 {
 	Point pnt1 = this->face->centre;
@@ -59,6 +61,16 @@ MyDouble Arc:: right_inter(Arc & parab, MyDouble sweep)
 	pair<MyDouble, MyDouble> tmp = this->intersection(parab, sweep);
 	return tmp.second;
 }
+MyDouble Arc:: of(MyDouble x, MyDouble sweep)
+{
+	MyDouble yf = face->centre.y();
+	MyDouble xf = face->centre.x();
+	if (yf == sweep)
+	{
+		return sweep;
+	}
+	return (x - xf)*(x - xf)/(2*(yf - sweep)) + (yf + sweep)/2;
+}
 ///////////////	############### \\\\\\\\\\\\\\\
 
 
@@ -70,9 +82,38 @@ Edge:: Edge(Segment guide) : inter(nullptr), left(nullptr), right(nullptr)
 {
 	edge = guide;
 }
-Edge:: Edge(Arc* left, Arc* right)
+Edge:: Edge(Arc* left, Arc* right, CircEvent* evt): inter(nullptr), left(nullptr), right(nullptr)
 {
-
+	MyDouble sweep = evt->y;
+	pair<MyDouble, MyDouble> options = left->intersection(*right, sweep);
+	Point pnt;
+	if (evt->vertex.x() == options.first)
+	{
+		pnt = Point(options.first, left->of(options.first, sweep));
+	}
+	else
+	{
+		pnt = Point(options.first, left->of(options.first, sweep));
+	}
+	// a perpendicular line
+	Line perp(pnt, Segment(left->face->centre, right->face->centre));
+	if (perp.a == 0)
+	{
+		if (pnt.x() > left->face->centre.x())
+		{
+			this->edge = Segment(pnt.x(), pnt.y(), pnt.x() + 1.0, pnt.y());
+			return;
+		}
+		else
+		{
+			this->edge = Segment(pnt.x(), pnt.y(), pnt.x() - 1.0, pnt.y());
+			return;
+		}
+	}
+	// a horisontal line
+	Line checker(Point(pnt.x(), pnt.y() - 1.0), Point(pnt.x() + 1.0, pnt.y() - 0.1));
+	edge = Segment(pnt, perp.intersection(checker));
+	edge = edge.normalise();
 }
 void Edge::unvalidate()
 {
@@ -159,18 +200,9 @@ bool Event:: operator >(Event & other) { return this->y < other.y || this->y == 
 bool Event:: operator>=(Event & other) { return !(*this < other); }
 bool Event:: operator<=(Event & other) { return !(*this > other); }
 // check case when cur is the ultimate arc
-bool Event:: operator <(Node* cur)
-{
-	return cur->left != nullptr || this->vertex.x() < cur->arc->left_inter(*cur->left->arc, this->y);
-}
-bool Event:: operator >(Node* cur)
-{
-	return cur->right != nullptr || this->vertex.x() > cur->arc->right_inter(*cur->right->arc, this->y);
-}
-bool Event:: operator==(Node* cur)
-{
-	return !(*this < cur) && !(*this > cur);
-}
+bool Event:: operator <(Node* cur) { return cur->left != nullptr || this->vertex.x() < cur->arc->left_inter(*cur->left->arc, this->y); }
+bool Event:: operator >(Node* cur) { return cur->right != nullptr || this->vertex.x() > cur->arc->right_inter(*cur->right->arc, this->y); }
+bool Event:: operator==(Node* cur) { return !(*this < cur) && !(*this > cur); }
 ///////////////	############### \\\\\\\\\\\\\\\
 
 
@@ -191,7 +223,6 @@ bool Event:: operator==(Node* cur)
 
 
 ///////////////	      NODE     	\\\\\\\\\\\\\\\
-
 
 Node::Node(SiteEvent* evt, Edge* ledge, Edge* redge):
 	ledge(ledge), redge(redge), left(nullptr), right(nullptr), parent(nullptr), height(1)
@@ -225,37 +256,33 @@ int Node:: corr_height()
 {
 	return this->height = 1 + ::max(this->left->get_height(), this->right->get_height());
 }
-
-void Node:: rebind(CircEvent* evt)
+void Node::swap_list_fields(Node* other)
 {
-	Node* cur = evt->arcnode;
+	Arc* tmparc = this->arc;
+	this->arc = other->arc;
+	other->arc = tmparc;
 
-	Node* leftnode = cur->ledge->left;
-	Node* rightnode = cur->redge->right;
-	Edge* newedge = new Edge(leftnode->arc, rightnode->arc);
-	newedge->left = leftnode;
-	newedge->right = rightnode;
-	leftnode->redge = newedge;
-	rightnode->ledge = newedge;
+	Edge* tmpedg = this->ledge;
+	this->ledge = other->ledge;
+	other->ledge = tmpedg;
 
-	CircEvent* newevt = new CircEvent(leftnode);
-	if (newevt != nullptr)
+	tmpedg = this->redge;
+	this->redge = other->redge;
+	other->redge = tmpedg;
+}
+// a tangent vector (oriented "to the left") to this->arc in point x
+Segment Node:: tangent(MyDouble x, MyDouble sweep)
+{
+	MyDouble xf = arc->face->centre.x();
+	MyDouble yf = arc->face->centre.y();
+	if (sweep == yf)
 	{
-		events->push(newevt);
+		return Segment(x, sweep, x, sweep - 1.0);
 	}
-	else
-	{
-		delete newevt;
-	}
-	newevt = new CircEvent(rightnode);
-	if (newevt != nullptr)
-	{
-		events->push(newevt);
-	}
-	else
-	{
-		delete newevt;
-	}
+	Point   pnt = Point(x, arc->of(x, sweep));
+	// plusing the derivative vector
+	Segment ans = Segment(pnt.x(), pnt.y(), pnt.x() + 1.0, pnt.y() + (x - xf) / (yf - sweep));
+	return ans.normalise();
 }
 ///////////////	############### \\\\\\\\\\\\\\\
 
@@ -267,6 +294,16 @@ void Node:: rebind(CircEvent* evt)
 AVL:: AVL(SiteEvent* first, myq* events) : events(events)
 {
 	Node* tmp = new Node(first);
+}
+// returns parent's pointer to cur or a root pointer if cur is the root
+Node** AVL:: get_upper(Node* cur)
+{
+	if (cur == root) { return &root; }
+	else
+	{
+		if (cur == cur->parent->left) { return &(cur->parent->left); }
+		else { return &(cur->parent->right); }
+	}
 }
 Node* AVL:: left_turn(Node* cur)
 {
@@ -326,20 +363,8 @@ void AVL:: balance(Node** cur)
 }
 void AVL:: up_balance(Node* cur)
 {
-	if (!cur)
-	{
-		return;
-	}
-	Node** tmp;
-	if (cur == root)
-	{
-		*tmp = root;
-	}
-	else
-	{
-		if (cur == cur->parent->left) { tmp = &(cur->parent->left); }
-		else { tmp = &(cur->parent->right); }
-	}
+	if (!cur) { return; }
+	Node** upper = get_upper(cur);
 
 	if (cur->rightH() - cur->leftH() == 2)
 	{
@@ -347,7 +372,7 @@ void AVL:: up_balance(Node* cur)
 		{
 			cur->right = right_turn(cur->right);
 		}
-		*tmp = left_turn(cur);
+		*upper = left_turn(cur);
 	}
 	if (cur->leftH() - cur->rightH() == 2)
 	{
@@ -355,10 +380,10 @@ void AVL:: up_balance(Node* cur)
 		{
 			cur->left = left_turn(cur->left);
 		}
-		*tmp = right_turn(cur);
+		*upper = right_turn(cur);
 	}
-	(*tmp)->height = (*tmp)->corr_height();
-	up_balance((*tmp)->parent);
+	(*upper)->height = (*upper)->corr_height();
+	up_balance((*upper)->parent);
 }
 void AVL:: insert_right(Segment & edg, SiteEvent* evt)
 {
@@ -383,5 +408,120 @@ void AVL:: _insert_right(Node** cur, Segment & edg, SiteEvent* evt)
 		_insert_right(&((*cur)->right), edg, evt);
 	}
 	balance(cur);
+}
+void AVL:: insert(SiteEvent* evt)
+{
+	_insert(root, evt);
+}
+void AVL:: _insert(Node* cur, SiteEvent* evt)
+{
+	// вставка: содание двух новых узлов вместо старого
+	// исходя из свойств beachline кревой узел найдётся
+	if (*evt < cur)
+	{
+		_insert(cur->left, evt);
+	}
+	else if (*evt > cur)
+	{
+		_insert(cur->right, evt);
+	}
+	else
+	{
+		// касательный вектор
+		Segment vr = cur->tangent(evt->vertex.x(), evt->y);
+		Segment vl = -vr;
+		// may be need to swap
+		// list
+		Edge* el = new Edge(vl);
+		Edge* er = new Edge(vr);
+		// *cur = al						// left part of the divided edge
+		Node* ao = new Node(evt, el, er);	// new (central) edge
+		Node* ar = new Node(cur->arc->face, er, cur->redge);  // right part of the divided edge
+		if (cur->redge != nullptr)
+		{
+			cur->redge->left = ar;
+		}
+		cur->redge = el;
+		el->left = cur;
+		el->right = ao;
+		er->left = ao;
+		er->right = ar;
+		// tree
+		if (ar->redge == nullptr) // used to be cur->redge
+			// means that cur used to be the rightest arc
+		{
+			cur->right = ao;
+			ao->parent = cur;
+			up_balance(ao);    // ao is still a leaf
+
+			ao->right = ar;
+			ar->parent = ao;
+			up_balance(ar);
+		}
+		else
+			// means that ar->redge->right is not empty
+		{
+			Node* tmp = ar->redge->right;
+			tmp->left = ar;
+			ar->parent = tmp;
+			up_balance(ar);
+
+			ar->left = ao;
+			ao->parent = ar;
+			up_balance(ao);
+		}
+		ADD CircEvent HERE
+	}
+}
+void AVL:: del(CircEvent* evt)
+{
+	/* according to the beachline and Events structure, 
+	   cur->ledge != 0 && cur->redge != 0 */
+	Node*  cur = evt->arcnode;
+	Node** upper = get_upper(cur);
+	Edge*  nedge = new Edge(cur->ledge->left->arc, cur->redge->right->arc, evt);
+	// list
+	cur->ledge->left->redge = nedge;
+	nedge->left = cur->ledge->left;
+	cur->redge->right->ledge = nedge;
+	nedge->right = cur->redge->right;
+
+	ADD POINT HERE
+	ADD CircEvent HERE
+	//tree
+	_del(upper);
+}
+void AVL:: _del(Node** cur)
+{
+	Node* tmp = *cur;
+	if ((*cur)->left == nullptr && (*cur)->right == nullptr)
+	{
+		*cur = nullptr;
+		up_balance(tmp->parent);
+		delete tmp;
+	}
+	else if ((*cur)->left != nullptr && (*cur)->right == nullptr)
+	{
+		(*cur)->left->parent = (*cur)->parent;
+		(*cur) = (*cur)->left; // меняем указатель отца cur
+		delete tmp;
+		up_balance(*cur);
+	}
+	else if ((*cur)->left == nullptr && (*cur)->right != nullptr)
+	{
+		(*cur)->right->parent = (*cur)->parent;
+		(*cur) = (*cur)->right; // меняем указатель отца cur
+		delete tmp;
+		up_balance(*cur);
+	}
+	else
+	{
+		// (*cur)->right != 0 so leftv is placed in the subtree of cur
+		Node* leftv = (*cur)->redge->right; // left node from *cur
+		(*cur)->swap_list_fields(leftv);
+		Node** tmpup = get_upper(leftv);
+		// leftv doesn't have the left child, so case 3 will rise
+		_del(tmpup); // makes up_balance
+	}
 }
 ///////////////	############### \\\\\\\\\\\\\\\
