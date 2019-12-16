@@ -42,11 +42,23 @@ struct Arc
 	{    }
 	Arc(SiteEvent* ev);
 	Arc(Locus* face);
+
 	pair<MyDouble, MyDouble> intersection(Arc &, MyDouble);
 	MyDouble left_inter(Arc &, MyDouble);
 	MyDouble right_inter(Arc &, MyDouble);
+	// y coordinate
+	MyDouble of(MyDouble, MyDouble);
 
 	Locus* face;
+	/*
+	if  yd  is the directris (sweepline) y coordinate
+		yf  is the focus y coordinate (face->centre.y())
+		xf  is the focus x coordinate (face->centre.x())
+	then the parabola equasion is
+
+	y = ((x - xf)^2) / (2*(yf - yd)) + (yf + yd)/2
+
+	*/
 };
 
 struct Edge
@@ -54,7 +66,7 @@ struct Edge
 	Edge(): inter(nullptr)
 	{	 }
 	Edge(Segment guide);
-	//Edge(Arc* left, Arc* right);
+	Edge(Arc* left, Arc* right, CircEvent* evt);
 
 	// сначала удаляюися рёбра - потом соотвествующее им событие
 	void unvalidate();
@@ -77,6 +89,7 @@ struct Locus
 		//an infinity point
 		vertexes.push_back(Point(numeric_limits<double>::max(), numeric_limits<double>::max()));
 	}
+
 	void add(Point pnt);
 	void print();
 
@@ -89,6 +102,7 @@ struct Diagram
 {
 	Diagram(): n(0) {    };
 	Diagram(int n);
+
 	void get(myq & Q);
 	void print();
 	
@@ -107,6 +121,7 @@ struct Event
 	{	
 		vertex = Point(pnt.x(), pnt.y());
 	}
+
 	bool operator==(Event & other);
 	bool operator <(Event & other);
 	bool operator >(Event & other);
@@ -117,11 +132,9 @@ struct Event
 	bool operator >(Node* parab);
 	bool operator==(Node* parab);
 
-
-
 	type tp;
-	Point vertex; // точка где происходит событие. Для CircEvent её координаты могут  отличаться от координаты sweepline
-	MyDouble y;
+	Point vertex; // An event point. For CircEvent vertex.y() != y (sweep line's)
+	MyDouble y;   // sweep line
 	bool valid;
 };
 
@@ -154,11 +167,12 @@ struct Node
 	{	}
 	Node(SiteEvent* arc, Edge* ledge = nullptr, Edge* redge = nullptr);
 	Node(Locus* face, Edge* ledge = nullptr, Edge* redge = nullptr);
-	void rebind(CircEvent*);
 	int get_height();
 	int leftH();
 	int rightH();
 	int corr_height();
+	void swap_list_fields(Node*);
+	Segment tangent(MyDouble, MyDouble);
 	~Node();
 
 	Arc* arc;
@@ -173,14 +187,13 @@ struct Node
 };
 
 
-//переписать через parent
 struct AVL
 {
 	AVL()
 	{	}
-	AVL(SiteEvent* first, myq*);
+	AVL(SiteEvent*, myq*);
 
-
+	Node** get_upper(Node*);
 	Node* left_turn(Node*);
 	Node* right_turn(Node*);
 	void balance(Node**);
@@ -188,158 +201,15 @@ struct AVL
 
 	void insert_right(Segment &, SiteEvent*);
 	void _insert_right(Node**, Segment &, SiteEvent*);
-	void insert(SiteEvent* evt)
-	{
-		_insert(&root, evt);
-	}
-	// Должен создавать CircEvent
-	void _insert(Node** cur, SiteEvent* evt)
-	{
-		// вставка: содание двух новых узлов вместо старого
-		// исходя из свойств beachline кревой узел найдётся
-		if (*evt < *cur)
-		{
-			_insert(&((*cur)->left), evt);
-		}
-		else if (*evt > *cur)
-		{
-			_insert(&((*cur)->right), evt);
-		}
-		// ADD HERE
-		else
-		{
-			// касательный вектор
-			Segment v1 = (*cur)->tanget(evt->vertex.x());
-			Segment v2 = -v1;
-			// may be need to swap
-			// list
-			Edge* el = new Edge(v1);
-			Edge* er = new Edge(v2);
-			// *cur = al						// left part of the divided edge
-			Node* ao = new Node(evt, el, er);	// new (central) edge
-			Node* ar = new Node((*cur)->arc->face, er, (*cur)->redge);  // right part of the divided edge
-			if ((*cur)->redge != nullptr)
-			{
-				(*cur)->redge->left = ar;
-			}
-			(*cur)->redge = el;
-			el->left = (*cur);
-			el->right = ao;
-			er->left = ao;
-			er->right = ar;
-			// tree
-			if ((*cur)->left == nullptr) // used to be (*cur)->redge
-				// means that cur used to be the rightest arc
-			{
-				(*cur)->right = ao;
-				ao->parent = *cur;
-				up_balance(ao);    // ao is still a leaf
-				ao->right = ar;
-				ar->parent = ao;
-				up_balance(ar);
-			}
-			else
-				// means that ar->redge->right is not empty
-			{
-				Node* tmp = ar->redge->right;
-				tmp->left = ao;
-				ao->parent = tmp;
-				up_balance(ao);
-				ao->right = ar;
-				ar->parent = ao;
-				up_balance(ar);
-			}
-			ADD EVENT HERE
-		}
-	}
-
-	// в CircEvent есть указатель на узел, но нужно делать рекурсивно для балансировки
-	void del(CircEvent* evt)
-	{
-		find(&root, evt);
-	}
-	void find(Node** cur, CircEvent* evt)
-	{
-		if (*cur == nullptr)
-		{
-			return;
-		}
-		// DEL HERE
-		else if (*cur == evt->arcnode)
-		{
-
-		}
-		else if (*evt < *cur)
-		{
-			find(&((*cur)->left), evt);
-			balance(cur);
-		}
-		else if (*evt > *cur)
-		{
-			find(&((*cur)->right), evt);
-			balance(cur);
-		}
-		// в случае если сразу несколько дуг схлопываются, нужно проверять всех потомков
-		else
-		{
-			find(&((*cur)->left), evt);
-			find((&(*cur)->right), evt);
-			balance(cur);
-		}
-	}
-
-	void __del__(Node** cur)
-	{
-		//изменение
-		if ((*cur)->left && (*cur)->right)
-		{
-			get_left(&((*cur)->right), &((*cur)->key));
-			balance(cur);
-			return;
-		}
-		// меняются рёбра
-		if (!(*cur)->left && (*cur)->right)
-		{
-			Node* tmp = *cur;
-			*cur = (*cur)->right;
-			delete tmp;
-			(*cur)->height = (*cur)->corr_height();
-			return;
-		}
-		if ((*cur)->left && !(*cur)->right)
-		{
-			Node* tmp = *cur;
-			*cur = (*cur)->left;
-			delete tmp;
-			(*cur)->height = (*cur)->corr_height();
-			return;
-		}
-		if (!(*cur)->left && !(*cur)->right)
-		{
-			Node* tmp = *cur;
-			*cur = 0;
-			delete tmp;
-			return;
-		}
-	}
-	// через swap
-	void get_left(Node** cur, T* write_to)
-	{
-		if (!(*cur)->left)
-		{
-			*write_to = (*cur)->key;
-			__del__(cur);
-			balance(cur);
-			return;
-		}
-		get_left(&((*cur)->left), write_to);
-		balance(cur);
-	}
-
+	void insert(SiteEvent*);
+	// Create CircEvent s
+	void _insert(Node*, SiteEvent*);
+	// Create a CircEvent and add points to the diagram
+	void del(CircEvent*);
+	//changes only the three structure
+	void _del(Node**);
 
 	Node* root;
 	myq* events;
 };
-
-
 #endif
