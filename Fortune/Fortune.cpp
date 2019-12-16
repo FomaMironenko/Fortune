@@ -44,9 +44,8 @@ struct Beachline
 
 
 // Fortune algorithm
-void set_diagram()
+void set_diagram(Diagram & voronoy)
 {
-	Diagram voronoy;
 	Comp cmp;
 	myq events;
 	//adds SiteEvents
@@ -55,14 +54,14 @@ void set_diagram()
 	Event *cur, *tmp;
 	cur = events.top();
 	events.pop();
-	Beachline front(&events, (SiteEvent*)cur);
+	Beachline bl(&events, (SiteEvent*)cur);
 	tmp = cur;
 	// пока что все события - SiteEvent для точек
 	// обработка случая: несколько верхних точек
 	while (!events.empty() && (cur = (SiteEvent*)events.top())->y == tmp->y)
 	{
 		// tmp->vertex - предыдущая вершина
-		front.preprocess(tmp->vertex, (SiteEvent*)cur);
+		bl.preprocess(tmp->vertex, (SiteEvent*)cur);
 		events.pop();
 		delete tmp;
 		tmp = cur;
@@ -75,13 +74,14 @@ void set_diagram()
 		events.pop();
 		if (cur->valid)
 		{
+			cur->vertex.print();
 			if (cur->tp == site)
 			{
-				front.process_site((SiteEvent*)cur);
+				bl.process_site((SiteEvent*)cur);
 			}
 			else
 			{
-				front.process_circ((CircEvent*)cur);
+				bl.process_circ((CircEvent*)cur);
 			}
 		}
 		delete cur;
@@ -95,14 +95,9 @@ void set_diagram()
 
 int main()
 {
-	//set_diagram();
-
-	// CHECK THIS OUT
-	//Point a(1, 2);
-	//Point b(3, 4);
-	//Segment s1(a, b);
-	//Segment s2(0, 0, 1.1, 2);
-	//cout << s1.cross(s2);
+	Diagram voronoy;
+	set_diagram(voronoy);
+	voronoy.print();
 }
 
 /*
