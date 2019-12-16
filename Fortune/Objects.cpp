@@ -78,11 +78,11 @@ MyDouble Arc:: of(MyDouble x, MyDouble sweep)
 
 ///////////////	      EDGE      \\\\\\\\\\\\\\\
 
-Edge:: Edge(Segment guide) : inter(nullptr), left(nullptr), right(nullptr)
+Edge:: Edge(Segment guide) : inters(vector<CircEvent*>(0)), left(nullptr), right(nullptr)
 {
 	edge = guide;
 }
-Edge:: Edge(Arc* left, Arc* right, CircEvent* evt): inter(nullptr), left(nullptr), right(nullptr)
+Edge:: Edge(Arc* left, Arc* right, CircEvent* evt): inters(vector<CircEvent*>(0)), left(nullptr), right(nullptr)
 {
 	MyDouble sweep = evt->y;
 	pair<MyDouble, MyDouble> options = left->intersection(*right, sweep);
@@ -117,9 +117,9 @@ Edge:: Edge(Arc* left, Arc* right, CircEvent* evt): inter(nullptr), left(nullptr
 }
 void Edge::unvalidate()
 {
-	if (inter != nullptr)
+	for (auto it = inters.begin(); it < inters.end(); it++)
 	{
-		inter->valid = false;
+		(*it)->valid = false;
 	}
 }
 Edge:: ~Edge()
@@ -200,8 +200,8 @@ bool Event:: operator >(Event & other) { return this->y < other.y || this->y == 
 bool Event:: operator>=(Event & other) { return !(*this < other); }
 bool Event:: operator<=(Event & other) { return !(*this > other); }
 // check case when cur is the ultimate arc
-bool Event:: operator <(Node* cur) { return cur->left != nullptr || this->vertex.x() < cur->arc->left_inter(*cur->left->arc, this->y); }
-bool Event:: operator >(Node* cur) { return cur->right != nullptr || this->vertex.x() > cur->arc->right_inter(*cur->right->arc, this->y); }
+bool Event:: operator <(Node* cur) { return cur->left != nullptr && this->vertex.x() < cur->arc->left_inter(*cur->left->arc, this->y); }
+bool Event:: operator >(Node* cur) { return cur->right != nullptr && this->vertex.x() > cur->arc->right_inter(*cur->right->arc, this->y); }
 bool Event:: operator==(Node* cur) { return !(*this < cur) && !(*this > cur); }
 ///////////////	############### \\\\\\\\\\\\\\\
 
@@ -217,6 +217,34 @@ bool Event:: operator==(Node* cur) { return !(*this < cur) && !(*this > cur); }
 
 ///////////////	  CIRC EVENT	\\\\\\\\\\\\\\\
 
+CircEvent::CircEvent(Node* arcnd): Event()
+{
+	this->tp = circ;
+	Segment eleft = arcnd->ledge->edge;
+	Segment eright = arcnd->redge->edge;
+	Line lleft(eleft);
+	Line lright(eright);
+	// they can't coinside
+	if (lleft.parallel(lright))
+	{
+		valid = false;
+		return;
+	}
+	Point inter = lleft.intersection(lright);
+	Segment ldir(eleft.start, inter);
+	Segment rdir(eright.start, inter);
+	if (eleft*ldir < 0 || eright*rdir < 0)
+	{
+		valid = false;
+		return;
+	}
+	vertex = inter;
+	arcnode = arcnd;
+	arcnode->ledge->inters.push_back(this);
+	arcnode->redge->inters.push_back(this);
+	Segment tmp(arcnode->arc->face->centre, inter);
+	y = inter.y() - tmp.len();
+}
 ///////////////	############### \\\\\\\\\\\\\\\
 
 
@@ -427,7 +455,7 @@ void AVL:: _insert(Node* cur, SiteEvent* evt)
 	}
 	else
 	{
-		// касательный вектор
+		// a normalised tangent 
 		Segment vr = cur->tangent(evt->vertex.x(), evt->y);
 		Segment vl = -vr;
 		// may be need to swap
@@ -470,7 +498,12 @@ void AVL:: _insert(Node* cur, SiteEvent* evt)
 			ao->parent = ar;
 			up_balance(ao);
 		}
-		ADD CircEvent HERE
+		CircEvent* newevt = new CircEvent(ar);
+		if (newevt->valid) { events->push(newevt); }
+		else			   { delete newevt; }
+		newevt = new CircEvent(cur);
+		if (newevt->valid) { events->push(newevt); }
+		else			   { delete newevt; }
 	}
 }
 void AVL:: del(CircEvent* evt)
@@ -478,16 +511,26 @@ void AVL:: del(CircEvent* evt)
 	/* according to the beachline and Events structure, 
 	   cur->ledge != 0 && cur->redge != 0 */
 	Node*  cur = evt->arcnode;
+	Node* al = cur->ledge->left;
+	Node* ar = cur->redge->right;
 	Node** upper = get_upper(cur);
-	Edge*  nedge = new Edge(cur->ledge->left->arc, cur->redge->right->arc, evt);
+	Edge*  nedge = new Edge(al->arc, ar->arc, evt);
 	// list
-	cur->ledge->left->redge = nedge;
-	nedge->left = cur->ledge->left;
-	cur->redge->right->ledge = nedge;
-	nedge->right = cur->redge->right;
-
-	ADD POINT HERE
-	ADD CircEvent HERE
+	al->redge = nedge;
+	nedge->left = al;
+	ar->ledge = nedge; 
+	nedge->right = ar;
+	// adding the vertex to the diagram
+	cur->arc->face->add(evt->vertex);
+	al->arc->face->add(evt->vertex);
+	ar->arc->face->add(evt->vertex);
+	// new events
+	CircEvent* newevt = new CircEvent(ar);
+	if (newevt->valid) { events->push(newevt); }
+	else { delete newevt; }
+	newevt = new CircEvent(cur);
+	if (newevt->valid) { events->push(newevt); }
+	else { delete newevt; }
 	//tree
 	_del(upper);
 }
