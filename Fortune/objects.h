@@ -24,7 +24,7 @@ struct CircEvent;
 struct Node;
 struct AVL;
 
-// компаратор для приоритетной очереди
+// A comparator for the priority queue myq
 struct Comp
 {
 	bool operator()(Event*, Event*);
@@ -63,7 +63,7 @@ struct Arc
 
 struct Edge
 {
-	Edge(): inter(nullptr)
+	Edge(): inters(vector<CircEvent*>(0))
 	{	 }
 	Edge(Segment guide);
 	Edge(Arc* left, Arc* right, CircEvent* evt);
@@ -75,7 +75,7 @@ struct Edge
 	Segment edge;
 	//!! случай если пересечений несколько
 	// пересечение с другим ребром
-	CircEvent* inter;
+	vector<CircEvent*> inters;
 	Node* left;
 	Node* right;
 };
@@ -154,7 +154,7 @@ struct CircEvent : Event
 	{	this->tp = circ;	}
 	CircEvent(MyDouble y, Point pnt) : Event(y, pnt)
 	{	this->tp = circ;	}
-
+	CircEvent(Node*);
 
 	Node* arcnode;
 };
@@ -187,6 +187,7 @@ struct Node
 };
 
 
+//переписать через parent
 struct AVL
 {
 	AVL()
