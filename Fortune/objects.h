@@ -144,6 +144,7 @@ struct SiteEvent : Event
 	{ this->tp = site; }
 	SiteEvent(MyDouble y, Point pnt): Event(y, pnt)
 	{ this->tp = site; }
+	SiteEvent(Locus*);
 
 	Locus* face;
 };
@@ -187,7 +188,6 @@ struct Node
 };
 
 
-//переписать через parent
 struct AVL
 {
 	AVL()
@@ -197,17 +197,16 @@ struct AVL
 	Node** get_upper(Node*);
 	Node* left_turn(Node*);
 	Node* right_turn(Node*);
-	void balance(Node**);
 	void up_balance(Node*);
 
 	void insert_right(Segment &, SiteEvent*);
-	void _insert_right(Node**, Segment &, SiteEvent*);
+	void _insert_right(Node*, Segment &, SiteEvent*);
 	void insert(SiteEvent*);
 	// Create CircEvent s
 	void _insert(Node*, SiteEvent*);
 	// Create a CircEvent and add points to the diagram
 	void del(CircEvent*);
-	//changes only the three structure
+	// Changes only the three structure
 	void _del(Node**);
 
 	Node* root;
