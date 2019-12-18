@@ -14,7 +14,7 @@ struct Beachline
 	{	}
 	Beachline(myq* evts, SiteEvent* first): events(evts)
 	{	
-		tree = AVL(first, events);
+		tree = new AVL(first, events);
 	}
 
 	// несколько верхних точек
@@ -23,21 +23,21 @@ struct Beachline
 		Point cur = evt->face->centre;
 		// prev.y() == cur.y() == evt->y
 		Segment tmp((prev.x() + cur.x()) / 2, prev.y(), (prev.x() + cur.x()) / 2, prev.y() - 1.0);
-		tree.insert_right(tmp, evt);
+		tree->insert_right(tmp, evt);
 	}
 
 	void process_site(SiteEvent* evt)
 	{
-		tree.insert(evt);
+		tree->insert(evt);
 	}
 
 	void process_circ(CircEvent* evt)
 	{
-		tree.del(evt);
+		tree->del(evt);
 	}
 
 
-	AVL tree;
+	AVL* tree;
 	myq* events;
 };
 
@@ -56,11 +56,12 @@ void set_diagram(Diagram & voronoy)
 	events.pop();
 	Beachline bl(&events, (SiteEvent*)cur);
 	tmp = cur;
-	// пока что все события - SiteEvent для точек
-	// обработка случая: несколько верхних точек
+	// by now all of the events are SiteEvents
+	// processing case of multi upper points
 	while (!events.empty() && (cur = (SiteEvent*)events.top())->y == tmp->y)
 	{
-		// tmp->vertex - предыдущая вершина
+		// tmp->vertex - last vertex
+		// cur->vertex.print();
 		bl.preprocess(tmp->vertex, (SiteEvent*)cur);
 		events.pop();
 		delete tmp;
@@ -74,7 +75,7 @@ void set_diagram(Diagram & voronoy)
 		events.pop();
 		if (cur->valid)
 		{
-			cur->vertex.print();
+			//cur->vertex.print();
 			if (cur->tp == site)
 			{
 				bl.process_site((SiteEvent*)cur);
@@ -87,8 +88,7 @@ void set_diagram(Diagram & voronoy)
 		delete cur;
 	}
 
-	cout << "\n";
-	voronoy.print();
+	//PROCESS THE EVENTS LEFT IN THE QUEUE
 }
 
 
