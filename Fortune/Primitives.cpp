@@ -129,7 +129,7 @@ MyDouble Segment:: x_project() { return end.first - start.first; }
 MyDouble Segment:: y_project() { return end.second - start.second; }
 Segment Segment:: operator +(Segment other) { return Segment(start, pair<MyDouble, MyDouble>(end.first + other.x_project(), end.second + other.y_project())); }
 Segment Segment:: operator+=(Segment other) { return *this = *this + other; }
-Segment Segment:: operator -() { return Segment(start, pair<int, int>(start.first - x_project(), start.second - y_project())); }
+Segment Segment:: operator -() { return Segment(start, pair<MyDouble, MyDouble>(start.first - x_project(), start.second - y_project())); }
 Segment Segment:: operator -(Segment other) { return *this + -other; }
 Segment Segment:: operator-=(Segment other) { return *this = *this - other; }
 Segment Segment:: operator *(MyDouble k) { return Segment(start, pair<MyDouble, MyDouble>(start.first + k * x_project(), start.second + k * y_project())); }
