@@ -17,7 +17,7 @@ pair<MyDouble, MyDouble> solve_square(MyDouble a, MyDouble b, MyDouble c)
 		// not considered: b == 0
 		return pair<MyDouble, MyDouble>(-c/b, -c/b);
 	}
-	return pair<MyDouble, MyDouble>((-b - sqrt(b*b - 4*a*c))/2, (-b + sqrt(b*b - 4*a*c))/2);
+	return pair<MyDouble, MyDouble>((-b - sqrt(b*b - 4*a*c))/(2*a), (-b + sqrt(b*b - 4*a*c))/(2*a));
 }
 
 
@@ -220,6 +220,11 @@ bool Event:: operator==(Node* cur) { return !(*this < cur) && !(*this > cur); }
 CircEvent::CircEvent(Node* arcnd): Event()
 {
 	this->tp = circ;
+	if (!arcnd->ledge || !arcnd->redge)
+	{
+		valid = false;
+		return;
+	}
 	Segment eleft = arcnd->ledge->edge;
 	Segment eright = arcnd->redge->edge;
 	Line lleft(eleft);
@@ -255,12 +260,12 @@ CircEvent::CircEvent(Node* arcnd): Event()
 Node::Node(SiteEvent* evt, Edge* ledge, Edge* redge):
 	ledge(ledge), redge(redge), left(nullptr), right(nullptr), parent(nullptr), height(1)
 {
-	Arc* tmp = new Arc(evt);
+	arc = new Arc(evt);
 }
 Node::Node(Locus* face, Edge* ledge, Edge* redge) :
 	ledge(ledge), redge(redge), left(nullptr), right(nullptr), parent(nullptr), height(1)
 {
-	Arc* tmp = new Arc(face);
+	arc = new Arc(face);
 }
 Node:: ~Node()
 {
@@ -321,7 +326,7 @@ Segment Node:: tangent(MyDouble x, MyDouble sweep)
 
 AVL:: AVL(SiteEvent* first, myq* events) : events(events)
 {
-	Node* tmp = new Node(first);
+	root = new Node(first);
 }
 // returns parent's pointer to cur or a root pointer if cur is the root
 Node** AVL:: get_upper(Node* cur)
@@ -365,30 +370,6 @@ Node* AVL:: right_turn(Node* cur)
 	tmp->height = tmp->corr_height();
 	return tmp;
 }
-void AVL:: balance(Node** cur)
-{
-	//left turn
-	if (!*cur)
-		return;
-	if ((*cur)->rightH() - (*cur)->leftH() == 2)
-	{
-		if ((*cur)->right->leftH() > (*cur)->right->rightH())
-		{
-			(*cur)->right = right_turn((*cur)->right);
-		}
-		(*cur) = left_turn(*cur);
-	}
-
-	if ((*cur)->leftH() - (*cur)->rightH() == 2)
-	{
-		if ((*cur)->left->rightH() > (*cur)->left->leftH())
-		{
-			(*cur)->left = left_turn((*cur)->left);
-		}
-		(*cur) = right_turn(*cur);
-	}
-	(*cur)->height = (*cur)->corr_height();
-}
 void AVL:: up_balance(Node* cur)
 {
 	if (!cur) { return; }
@@ -415,27 +396,27 @@ void AVL:: up_balance(Node* cur)
 }
 void AVL:: insert_right(Segment & edg, SiteEvent* evt)
 {
-	_insert_right(&root, edg, evt);
+	_insert_right(root, edg, evt);
 }
-void AVL:: _insert_right(Node** cur, Segment & edg, SiteEvent* evt)
+void AVL:: _insert_right(Node* cur, Segment & edg, SiteEvent* evt)
 {
-	if (!(*cur)->right)
+	if (!cur->right)
 	{
 		// tree
 		Edge* edge = new Edge(edg);
-		(*cur)->right = new Node(evt);
-		(*cur)->right->parent = *cur;
+		cur->right = new Node(evt);
+		cur->right->parent = cur;
 		// list
-		(*cur)->redge = edge;
-		(*cur)->right->ledge = edge;
-		edge->left = *cur;
-		edge->right = (*cur)->right;
+		cur->redge = edge;
+		cur->right->ledge = edge;
+		edge->left = cur;
+		edge->right = cur->right;
+		up_balance(cur->right);
 	}
 	else
 	{
-		_insert_right(&((*cur)->right), edg, evt);
+		_insert_right(cur->right, edg, evt);
 	}
-	balance(cur);
 }
 void AVL:: insert(SiteEvent* evt)
 {
