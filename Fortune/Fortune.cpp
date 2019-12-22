@@ -60,8 +60,7 @@ void set_diagram(Diagram & voronoy)
 	// processing case of multi upper points
 	while (!events.empty() && (cur = (SiteEvent*)events.top())->y == tmp->y)
 	{
-		// tmp->vertex - last vertex
-		// cur->vertex.print();
+		// tmp->vertex - previous vertex
 		bl.preprocess(tmp->vertex, (SiteEvent*)cur);
 		events.pop();
 		delete tmp;
@@ -114,4 +113,29 @@ Segment(point, dir)
 удаления = у координата точки пересечения(новой вершины диаграммы)
 
 
+1 0
+3 0
+4 0
+5 0
+8 0
+2 -2
+
+
+
+8 3
+5 6
+0 2
+0 5
+7 1
+-3 -2
+1 4
+
+3 3
+-5 2
+
+
+if (Point(6.5, -5.5) == inter)
+	{
+		int a = 2 / (int(!bool(&inter)) & int(!bool(&arcnd)));
+	}
 */
