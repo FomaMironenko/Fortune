@@ -68,8 +68,10 @@ struct Edge
 	Edge(Segment guide);
 	Edge(Arc* left, Arc* right, CircEvent* evt);
 
-	// сначала удаляюися рёбра - потом соотвествующее им событие
+	// edges are deleted furst then - corresponding events
 	void unvalidate();
+	//needed for Node::swap_list_fields
+	void reset_event(Node*, Node*);
 	~Edge();
 
 	Segment edge;
@@ -173,6 +175,7 @@ struct Node
 	int rightH();
 	int corr_height();
 	void swap_list_fields(Node*);
+	void set_parent(Node*);
 	Segment tangent(MyDouble, MyDouble);
 	~Node();
 
@@ -198,7 +201,10 @@ struct AVL
 	Node* left_turn(Node*);
 	Node* right_turn(Node*);
 	void up_balance(Node*);
+	void swap_nodes(Node**, Node**);
+	void swap_nodes2(Node*, Node*);
 
+	// case of more then one upper points
 	void insert_right(Segment &, SiteEvent*);
 	void _insert_right(Node*, Segment &, SiteEvent*);
 	void insert(SiteEvent*);
@@ -209,7 +215,7 @@ struct AVL
 	// Changes only the three structure
 	void _del(Node**);
 
-	Node* root;
+	Node** root;
 	myq* events;
 };
 #endif
