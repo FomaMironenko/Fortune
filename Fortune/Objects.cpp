@@ -115,11 +115,21 @@ Edge:: Edge(Arc* left, Arc* right, CircEvent* evt): inters(vector<CircEvent*>(0)
 	edge = Segment(pnt, perp.intersection(checker));
 	edge = edge.normalise();
 }
-void Edge::unvalidate()
+void Edge:: unvalidate()
 {
 	for (auto it = inters.begin(); it < inters.end(); it++)
 	{
 		(*it)->valid = false;
+	}
+}
+void Edge:: reset_event(Node* oevt, Node* nevt)
+{
+	for (auto it = inters.begin(); it < inters.end(); it++)
+	{
+		if ((*it)->arcnode == oevt)
+		{
+			(*it)->arcnode = nevt;
+		}
 	}
 }
 Edge:: ~Edge()
@@ -145,6 +155,7 @@ void Locus::print()
 	for (auto it = vertexes.begin(); it != vertexes.end(); it++)
 	{
 		it->print(true);
+		cout << " ";
 	}
 	cout << endl;
 }
@@ -166,12 +177,13 @@ Diagram:: Diagram(int n): n(n)
 }
 void Diagram:: get(myq & Q)
 {
+	cout << "Enter the points. In the end of input enter ctrl+z\n\n";
 	Point tmp;
 	while (cin >> tmp)
 	{
 		Locus* face = new Locus;
 		face->centre = tmp;
-		faces.push_back(face);  //copies fields
+		faces.push_back(face);  
 		SiteEvent* nsite = new SiteEvent(face);
 		Q.push(nsite);
 		n++;
@@ -224,11 +236,9 @@ SiteEvent::SiteEvent(Locus* nf): Event(nf->centre.y(), nf->centre)
 CircEvent::CircEvent(Node* arcnd): Event()
 {
 	this->tp = circ;
-	if (!arcnd->ledge || !arcnd->redge || 
-		abs(arcnd->arc->face->centre.x()) > 1e12 || // an intersection coused by a 
-		abs(arcnd->arc->face->centre.y()) > 1e12)   // calculation error
+	if (!arcnd->ledge || !arcnd->redge)
 	{
-		valid = false;
+		this->valid = false;
 		return;
 	}
 	Segment eleft = arcnd->ledge->edge;
@@ -238,7 +248,7 @@ CircEvent::CircEvent(Node* arcnd): Event()
 	// they can't coinside
 	if (lleft.parallel(lright))
 	{
-		valid = false;
+		this->valid = false;
 		return;
 	}
 	Point inter = lleft.intersection(lright);
@@ -297,23 +307,50 @@ int Node:: corr_height()
 }
 void Node:: swap_list_fields(Node* other)
 {
+	// this->redge->right == other    =>
+	// this->redge == other->ledge
 	Arc* tmparc = this->arc;
 	this->arc = other->arc;
 	other->arc = tmparc;
 
-	if (other->ledge) { other->ledge->right = this; }
-	if (this->ledge)  { this->ledge->right = other; }
-	Edge* tmpedg = this->ledge;
-	this->ledge = other->ledge;
-	other->ledge = tmpedg;
+	if (other->ledge)
+	{
+		other->ledge->right = this;
+		other->ledge->reset_event(other, this);
+	}
 
-	if (other->redge) { other->redge->left = this; }
-	if (this->redge)  { this->redge->left = other; }
+	if (this->ledge)  
+	{
+		this->ledge->right = other; 
+		this->ledge->reset_event(this, other);
+	}
+	Edge* tmpedg = this->ledge;
+	this->ledge = other->ledge; 
+	other->ledge = tmpedg;		
+
+
+	if (other->redge) 
+	{ 
+		other->redge->left = this; 
+		other->redge->reset_event(other, this);
+	}
+	if (this->redge)  
+	{ 
+		this->redge->left = other; 
+		this->redge->reset_event(this, other);
+	}
 	tmpedg = this->redge;
-	this->redge = other->redge;
+	this->redge = other->redge; 
 	other->redge = tmpedg;
 }
-// a tangent vector (oriented "to the left") to this->arc in point x
+void Node:: set_parent(Node* npar)
+{
+	if (this != nullptr)
+	{
+		this->parent = npar;
+	}
+}
+// a tangent vector (oriented "to the right") to this->arc in point x
 Segment Node:: tangent(MyDouble x, MyDouble sweep)
 {
 	MyDouble xf = arc->face->centre.x();
@@ -336,12 +373,13 @@ Segment Node:: tangent(MyDouble x, MyDouble sweep)
 
 AVL:: AVL(SiteEvent* first, myq* events) : events(events)
 {
-	root = new Node(first);
+	root = new Node*;
+	*root = new Node(first);
 }
 // returns parent's pointer to cur or a root pointer if cur is the root
 Node** AVL:: get_upper(Node* cur)
 {
-	if (cur == root) { return &root; }
+	if (cur == *root) { return root; }
 	else
 	{
 		if (cur == cur->parent->left) { return &(cur->parent->left); }
@@ -382,7 +420,7 @@ Node* AVL:: right_turn(Node* cur)
 }
 void AVL:: up_balance(Node* cur)
 {
-	if (!cur) { return; }
+	if (cur == nullptr) { return; }
 	Node** upper = get_upper(cur);
 
 	if (cur->rightH() - cur->leftH() == 2)
@@ -404,9 +442,82 @@ void AVL:: up_balance(Node* cur)
 	(*upper)->height = (*upper)->corr_height();
 	up_balance((*upper)->parent);
 }
+void AVL:: swap_nodes(Node** cur, Node** rightv)
+{ 
+	Node* tmp;
+	tmp = (*cur)->left;
+	(*cur)->left = (*rightv)->left;
+	(*rightv)->left = tmp;
+
+	if (*rightv != (*cur)->right)
+	{
+		tmp = (*cur)->right;
+	}
+	else
+	{
+		tmp = (*cur);
+	}
+	(*cur)->right = (*rightv)->right;
+	(*rightv)->right = tmp;
+
+	if (*rightv != (*cur)->right)
+	{
+		tmp = (*rightv)->parent;
+	}
+	else
+	{
+		tmp = *rightv;
+	}
+	(*rightv)->parent = (*cur)->parent;
+	(*cur)->parent = tmp;
+
+	if (*rightv != (*cur)->right)
+	{
+		tmp = *cur;  // parent's pointers
+	}
+	else
+	{
+		tmp = (*cur)->right;
+	}
+	*cur = *rightv;
+	*rightv = tmp;
+}
+
+
+void AVL:: swap_nodes2(Node* cur, Node* rightv)
+	// to swap:  (1) ->left, (2) ->right, (3) ->parent, (4) ->left->parent, (5) ->right->parent, (6) *upper 
+{
+	if (cur->right == rightv)
+	{
+		Node** curupper = get_upper(cur);
+		cur->left->set_parent(rightv);		//1.4
+		cur->right->set_parent(cur->parent);//1.5 2.3
+		rightv->left->set_parent(cur);		//2.4
+		rightv->right->set_parent(cur);		//2.5 
+		cur->set_parent(rightv);			//1.3
+		swap(cur->left, rightv->left);		//1.1 2.1
+		cur->right = rightv->right;			//1.2
+		rightv->right = cur;				//2.2 1.6
+		*curupper = rightv;					//2.6
+	}
+	else
+	{
+		Node** curupper = get_upper(cur);
+		Node** rgtupper = get_upper(rightv);
+		cur->left->set_parent(rightv);		//1.4
+		cur->right->set_parent(rightv);		//1.5
+		rightv->left->set_parent(cur);		//2.4
+		rightv->right->set_parent(cur);		//2.5
+		swap(cur->left, rightv->left);		//1.1 2.1
+		swap(cur->right, rightv->right);	//1.2 2.2
+		swap(cur->parent, rightv->parent);	//1.3 2.3
+		swap(*curupper, *rgtupper);			//1.6 2.6
+	}
+}
+
 void AVL:: insert_right(Segment & edg, SiteEvent* evt)
 {
-	_insert_right(root, edg, evt);
+	_insert_right(*root, edg, evt);
 }
 void AVL:: _insert_right(Node* cur, Segment & edg, SiteEvent* evt)
 {
@@ -430,12 +541,12 @@ void AVL:: _insert_right(Node* cur, Segment & edg, SiteEvent* evt)
 }
 void AVL:: insert(SiteEvent* evt)
 {
-	_insert(root, evt);
+	_insert(*root, evt);
 }
 void AVL:: _insert(Node* cur, SiteEvent* evt)
 {
-	// вставка: содание двух новых узлов вместо старого
-	// исходя из свойств beachline кревой узел найдётся
+	// inserting: three new nodes instear of the ol one (old + 2)
+	// according to beachline properties there will be an ultimate node
 	if (*evt < cur)
 	{
 		_insert(cur->left, evt);
@@ -446,16 +557,15 @@ void AVL:: _insert(Node* cur, SiteEvent* evt)
 	}
 	else
 	{
-		// a normalised tangent 
+		// a normalised tangent vector to the arc
 		Segment vr = cur->tangent(evt->vertex.x(), evt->y);
 		Segment vl = -vr;
-		// may be need to swap
 		// list
 		Edge* el = new Edge(vl);
 		Edge* er = new Edge(vr);
-		// *cur = al						// left part of the divided edge
-		Node* ao = new Node(evt, el, er);	// new (central) edge
-		Node* ar = new Node(cur->arc->face, er, cur->redge);  // right part of the divided edge
+		// *cur = al											// left part of the divided edge
+		Node* ao = new Node(evt, el, er);						// new (central) edge
+		Node* ar = new Node(cur->arc->face, er, cur->redge);	// right part of the divided edge
 		if (cur->redge != nullptr)
 		{
 			cur->redge->left = ar;
@@ -465,29 +575,39 @@ void AVL:: _insert(Node* cur, SiteEvent* evt)
 		el->right = ao;
 		er->left = ao;
 		er->right = ar;
+
 		// tree
 		if (ar->redge == nullptr) // used to be cur->redge
 			// means that cur used to be the rightest arc
 		{
-			cur->right = ao;
-			ao->parent = cur;
+			cur->right = ar;
+			ar->parent = cur;
 			up_balance(cur);    // ao is still a leaf
-
-			ao->right = ar;
-			ar->parent = ao;
-			up_balance(ao);
 		}
 		else
-			// means that ar->redge->right is not empty
+			// means that ar->redge->right is not empty, but ar->redge->right->left is
 		{
 			Node* tmp = ar->redge->right;
 			tmp->left = ar;
 			ar->parent = tmp;
 			up_balance(tmp);
+		}
 
+		// now cur and ar are neighbours in the tree projection
+		// and ar is from the right side of cur, so it's obveous 
+		// that   either   ar->left == 0   or   cur->right == 0  
+		// otherwise there's something between them and it's a contradiction
+		if (ar->left == nullptr)
+		{
 			ar->left = ao;
 			ao->parent = ar;
 			up_balance(ar);
+		}
+		else
+		{
+			cur->right = ao;
+			ao->parent = cur;
+			up_balance(cur);
 		}
 		CircEvent* newevt = new CircEvent(ar);
 		if (newevt->valid) { events->push(newevt); }
@@ -520,7 +640,7 @@ void AVL:: del(CircEvent* evt)
 	CircEvent* newevt = new CircEvent(ar);
 	if (newevt->valid) { events->push(newevt); }
 	else { delete newevt; }
-	newevt = new CircEvent(cur);
+	newevt = new CircEvent(al);
 	if (newevt->valid) { events->push(newevt); }
 	else { delete newevt; }
 	//tree
@@ -538,7 +658,7 @@ void AVL:: _del(Node** cur)
 	else if ((*cur)->left != nullptr && (*cur)->right == nullptr)
 	{
 		(*cur)->left->parent = (*cur)->parent;
-		(*cur) = (*cur)->left; // change parent's pointer
+		(*cur) = (*cur)->left; // change parent's pointer; also works if *cur is root
 		delete tmp;
 		up_balance(*cur);
 	}
@@ -551,12 +671,14 @@ void AVL:: _del(Node** cur)
 	}
 	else
 	{
-		// (*cur)->right != 0 so leftv is placed in the subtree of cur
-		Node* leftv = (*cur)->redge->right; // left node from *cur
-		Node** tmpup = get_upper(leftv);
-		(*cur)->swap_list_fields(leftv);
-		// leftv doesn't have the left child, so case 3 will rise
-		_del(tmpup); // makes up_balance
+		// (*cur)->right != 0 so rightv is placed in the subtree of cur
+		Node* rightv = (*cur)->redge->right;
+		Node* todel = *cur;
+		//(*cur)->swap_list_fields(rightv);
+		//Node** tmpup = get_upper(rightv);
+		//_del(tmpup);
+		swap_nodes2(todel, rightv);
+		_del(get_upper(todel));		
 	}
 }
 ///////////////	############### \\\\\\\\\\\\\\\
