@@ -95,6 +95,8 @@ struct Locus
 	void add(Point pnt);
 	void print();
 
+	~Locus();
+
 	Point centre;
 	list<Point> vertexes;
 };
@@ -108,9 +110,13 @@ struct Diagram
 	void get(myq & Q);
 	void print();
 	
+	~Diagram();
+
 	int n;
 	vector<Locus*> faces;
 };
+
+
 
 
 enum type{site, circ};
@@ -177,6 +183,10 @@ struct Node
 	void swap_list_fields(Node*);
 	void set_parent(Node*);
 	Segment tangent(MyDouble, MyDouble);
+	// if this->ledge != 0
+	MyDouble left_end(MyDouble);
+	// if this->redge != 0
+	MyDouble right_end(MyDouble);
 	~Node();
 
 	Arc* arc;
@@ -201,8 +211,7 @@ struct AVL
 	Node* left_turn(Node*);
 	Node* right_turn(Node*);
 	void up_balance(Node*);
-	void swap_nodes(Node**, Node**);
-	void swap_nodes2(Node*, Node*);
+	void swap_nodes(Node*, Node*);
 
 	// case of more then one upper points
 	void insert_right(Segment &, SiteEvent*);
@@ -214,6 +223,8 @@ struct AVL
 	void del(CircEvent*);
 	// Changes only the three structure
 	void _del(Node**);
+
+	~AVL();
 
 	Node** root;
 	myq* events;
