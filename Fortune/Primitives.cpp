@@ -81,16 +81,20 @@ MyDouble:: MyDouble(double x)
 
 MyDouble:: operator double() const { return value; }
 MyDouble & MyDouble:: operator =(const MyDouble& other) { this->value = other.value; return *this; }
-MyDouble MyDouble:: operator +(double other) { return MyDouble((double)this->value + other); }
+MyDouble MyDouble:: operator +(double other) { return MyDouble(this->value + other); }
 MyDouble MyDouble:: operator+=(double other) { return *this = MyDouble(*this + other); }
-MyDouble MyDouble:: operator -() { return MyDouble(-(double)*this); }
+MyDouble MyDouble:: operator -() { return MyDouble(-this->value); }
 MyDouble MyDouble:: operator -(double other) { return MyDouble(*this + -other); }
 MyDouble MyDouble:: operator-=(double other) { return *this = *this - other; }
-bool MyDouble:: operator==(MyDouble & other) { return abs(*this - other) < eps; }
-bool MyDouble:: operator<=(MyDouble & other) { return *this < other + eps; }
-bool MyDouble:: operator>=(MyDouble & other) { return *this > other - eps; }
-bool MyDouble:: operator <(MyDouble & other) { return *this < other - eps; }
-bool MyDouble:: operator >(MyDouble & other) { return *this > other + eps; }
+MyDouble MyDouble:: operator *(double other) { return MyDouble(this->value * other); }
+MyDouble MyDouble:: operator*=(double other) { return *this = *this * other; }
+MyDouble MyDouble:: operator /(double other) { return MyDouble(this->value / other); }
+MyDouble MyDouble:: operator/=(double other) { return *this = *this / other; }
+bool MyDouble:: operator==(MyDouble other) { return abs(*this - other) < eps; }
+bool MyDouble:: operator<=(MyDouble other) { return this->value < other.value + eps; }
+bool MyDouble:: operator>=(MyDouble other) { return this->value > other.value - eps; }
+bool MyDouble:: operator <(MyDouble other) { return this->value < other.value - eps; }
+bool MyDouble:: operator >(MyDouble other) { return this->value > other.value + eps; }
 
 istream & operator>>(istream & cin, MyDouble & num)
 {
@@ -99,7 +103,7 @@ istream & operator>>(istream & cin, MyDouble & num)
 }
 ostream & operator<<(ostream & cout, MyDouble & num)
 {
-	cout << num.value;
+	printf("%.4f", num.value);
 	return cout;
 }
 //////////////////// ################### \\\\\\\\\\\\\\\\\\\\
@@ -137,7 +141,7 @@ Segment Segment:: operator*=(MyDouble k) { return *this = (*this) * k; }
 //scalar product
 MyDouble Segment:: operator *(Segment other) { return x_project()*other.x_project() + y_project()*other.y_project(); }
 //vector product
-MyDouble Segment::operator ^(Segment other) { return x_project()*other.y_project() - y_project()*other.x_project(); }
+MyDouble Segment:: operator ^(Segment other) { return x_project()*other.y_project() - y_project()*other.x_project(); }
 
 MyDouble Segment::len()
 {
@@ -150,11 +154,11 @@ void Segment:: print()
 }
 bool Segment:: between(Point pnt)
 {
-	return ((*this)*(Point(start) - pnt)) <= 0 && ((*this)*(Point(end) - pnt)) >= 0;
+	return ((*this)*(Point(start) - pnt)) <= NILL && ((*this)*(Point(end) - pnt)) >= NILL;
 }
 bool Segment:: contain(Point pnt)
 {
-	return this->between(pnt) && ((Point(start) - pnt) ^ (Point(end) - pnt)) == 0;
+	return this->between(pnt) && ((Point(start) - pnt) ^ (Point(end) - pnt)) == NILL;
 }
 bool Segment:: cross(Segment other)
 {
@@ -213,7 +217,7 @@ void Point:: print(bool nice)
 {
 	if (nice)
 	{
-		if (this->end.first == numeric_limits<double>::max() || this->end.second == numeric_limits<double>::max())
+		if (this->end.first == (MyDouble)numeric_limits<double>::max() || this->end.second == (MyDouble)numeric_limits<double>::max())
 		{
 			cout << "(inf, inf) ";
 		}
@@ -279,19 +283,20 @@ MyDouble Line:: operator()(Point pnt) { return a * pnt.end.first + b * pnt.end.s
 Point Line:: intersection(Line other)
 {
 	MyDouble det = a * other.b - b * other.a;
-	if (det == 0)
+	if (det == MyDouble(0))
 	{
-		if (other(this->pnt) == 0)
+		if (other(this->pnt) == NILL)
 		{
 			return pnt;
 		}
 		return Point(numeric_limits<double>::max(), numeric_limits<double>::max());
 	}
-	return Point(((MyDouble)other.c*b - c * other.b) / det, ((MyDouble)other.a*c - a * other.c) / det);
+	Point tmp((other.c*b - c * other.b) / det, (other.a*c - a * other.c) / det);
+	return tmp;
 }
 int Line:: parallel(Line other)
 {
-	return a * other.b - b * other.a == 0;
+	return a * other.b == b * other.a;
 }
 //////////////////// ################### \\\\\\\\\\\\\\\\\\\\
 
@@ -320,7 +325,7 @@ Polygon::Comp::Comp(Point p)
 }
 bool Polygon::Comp:: operator()(Point & p1, Point & p2)
 {
-	return origin.polar_ang(p1, p2) > 0 || (origin.polar_ang(p1, p2) == 0 && (p1 - origin)*(p1 - p2) <= 0);
+	return origin.polar_ang(p1, p2) > NILL || (origin.polar_ang(p1, p2) == NILL && (p1 - origin)*(p1 - p2) <= NILL);
 }
 
 void Polygon::convex_hull()
@@ -353,7 +358,7 @@ void Polygon::convex_hull()
 	for (auto it = bucket.begin() + 2; it < bucket.end(); it++)
 	{
 		second = *(points.end() - 2);
-		while (points.size() > 1 && ((*it - second) ^ (points.back() - second)) >= 0)
+		while (points.size() > 1 && ((*it - second) ^ (points.back() - second)) >= NILL)
 		{
 			points.pop_back();
 			if (points.size() == 1)
