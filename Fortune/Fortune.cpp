@@ -1,9 +1,4 @@
 #include "pch.h"
-#include <iostream>
-#include <queue>
-#include <set>
-#include <system_error>
-
 #include "primitives.h"
 #include "objects.h"
 
