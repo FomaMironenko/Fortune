@@ -1,14 +1,12 @@
 #ifndef PRIMS
 #define PRIMS
 
-
 #include "pch.h"
 #include <iostream>
 #include <algorithm>
 #include <vector>
 
 using namespace std;
-
 
 #define NILL MyDouble(0)
 struct Segment;
