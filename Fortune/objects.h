@@ -1,18 +1,12 @@
-#pragma once
 #ifndef OBJECTS
 #define OBJECTS
 
 #include "primitives.h"
 
-#include "pch.h"
-#include <iostream>
-#include <algorithm>
 #include <queue>
-#include <list>
 #include <math.h>
 
 using namespace std;
-
 
 struct Arc;
 struct Edge;
@@ -87,10 +81,7 @@ struct Edge
 struct Locus
 {
 	Locus(): centre(Point(0, 0))
-	{	
-		//an infinity point
-		vertexes.push_back(Point(numeric_limits<double>::max(), numeric_limits<double>::max()));
-	}
+	{	}
 
 	void add(Point pnt);
 	void print();
@@ -98,7 +89,7 @@ struct Locus
 	~Locus();
 
 	Point centre;
-	list<Point> vertexes;
+	vector<Point> vertexes;
 };
 
 
@@ -217,12 +208,14 @@ struct AVL
 	void insert_right(Segment &, SiteEvent*);
 	void _insert_right(Node*, Segment &, SiteEvent*);
 	void insert(SiteEvent*);
-	// Create CircEvent s
+	// Create CircEvents
 	void _insert(Node*, SiteEvent*);
 	// Create a CircEvent and add points to the diagram
 	void del(CircEvent*);
 	// Changes only the three structure
 	void _del(Node**);
+	// Checks the arcs left in the beachline and adds infinity points to the diagram
+	void post_process();
 
 	~AVL();
 
