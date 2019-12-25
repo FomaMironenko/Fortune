@@ -1,8 +1,6 @@
 #include "pch.h"
-#define PCH
-
-
 #include "primitives.h"
+
 
 int GCD(int a, int b)
 {
@@ -90,7 +88,8 @@ MyDouble MyDouble:: operator *(double other) { return MyDouble(this->value * oth
 MyDouble MyDouble:: operator*=(double other) { return *this = *this * other; }
 MyDouble MyDouble:: operator /(double other) { return MyDouble(this->value / other); }
 MyDouble MyDouble:: operator/=(double other) { return *this = *this / other; }
-bool MyDouble:: operator==(MyDouble other) { return abs(*this - other) < eps; }
+bool MyDouble:: operator==(MyDouble other) { 
+	return abs(*this - (double)other) < eps; }
 bool MyDouble:: operator<=(MyDouble other) { return this->value < other.value + eps; }
 bool MyDouble:: operator>=(MyDouble other) { return this->value > other.value - eps; }
 bool MyDouble:: operator <(MyDouble other) { return this->value < other.value - eps; }
@@ -204,7 +203,8 @@ void Point:: get()
 	cin >> this->end.first;
 	cin >> this->end.second;
 }
-bool Point:: operator==(Point & other) { return (this->end.first == other.end.first && this->end.second == other.end.second); }
+bool Point:: operator==(Point & other) {
+	return (this->end.first == other.end.first && this->end.second == other.end.second); }
 bool Point:: operator!=(Point & other) { return !(*this == other); }
 bool Point:: operator >(Point & other) { return (this->end.second < other.end.second || (this->end.second == other.end.second && this->end.first > other.end.first)); }
 bool Point:: operator <(Point & other) { return (this->end.second > other.end.second || (this->end.second == other.end.second && this->end.first < other.end.first)); }
