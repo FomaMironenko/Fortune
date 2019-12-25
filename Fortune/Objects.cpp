@@ -1,6 +1,4 @@
 #include "pch.h"
-#include <iostream>
-
 #include "primitives.h"
 #include "objects.h"
 
@@ -148,7 +146,14 @@ Edge:: ~Edge()
 
 void Locus:: add(Point pnt)
 {
-	vertexes.push_back(pnt);
+	// the only case when same point can be added more than
+	// once is when processing a CircEvent for more than
+	// three points. So it's enough to check just only the 
+	// last point in vertexes for coinsiding
+	if (vertexes.size() == 0 || vertexes.back() != pnt)
+	{
+		vertexes.push_back(pnt);
+	}
 }
 void Locus::print()
 {
@@ -337,44 +342,6 @@ int Node:: rightH()
 int Node:: corr_height()
 {
 	return this->height = 1 + ::max(this->left->get_height(), this->right->get_height());
-}
-void Node:: swap_list_fields(Node* other)
-{
-	// this->redge->right == other    =>
-	// this->redge == other->ledge
-	Arc* tmparc = this->arc;
-	this->arc = other->arc;
-	other->arc = tmparc;
-
-	if (other->ledge)
-	{
-		other->ledge->right = this;
-		other->ledge->reset_event(other, this);
-	}
-
-	if (this->ledge)  
-	{
-		this->ledge->right = other; 
-		this->ledge->reset_event(this, other);
-	}
-	Edge* tmpedg = this->ledge;
-	this->ledge = other->ledge; 
-	other->ledge = tmpedg;		
-
-
-	if (other->redge) 
-	{ 
-		other->redge->left = this; 
-		other->redge->reset_event(other, this);
-	}
-	if (this->redge)  
-	{ 
-		this->redge->left = other; 
-		this->redge->reset_event(this, other);
-	}
-	tmpedg = this->redge;
-	this->redge = other->redge; 
-	other->redge = tmpedg;
 }
 void Node:: set_parent(Node* npar)
 {
@@ -565,6 +532,9 @@ void AVL:: _insert_right(Node* cur, Segment & edg, SiteEvent* evt)
 		cur->right->ledge = edge;
 		edge->left = cur;
 		edge->right = cur->right;
+		// add
+		cur->arc->face->add(((-edge->edge) * 1000).end); // an "infinity" point
+		cur->right->arc->face->add(((-edge->edge) * 1000).end);
 		up_balance(cur->right);
 	}
 	else
@@ -610,17 +580,18 @@ void AVL:: _insert(Node* cur, SiteEvent* evt)
 		er->right = ar;
 
 		// tree
-		if (ar->redge == nullptr) // used to be cur->redge
-			// means that cur used to be the rightest arc
+		if (cur->right == nullptr)
 		{
 			cur->right = ar;
 			ar->parent = cur;
-			up_balance(cur);    // ao is still a leaf
+			up_balance(cur);
 		}
 		else
-			// means that ar->redge->right is not empty, but ar->redge->right->left is
+			// means that curs left subtree is nonempty, so ar->redge->right 
+			// is nonempty and is placed in curs right subtree 
+			// but ar->redge->right->left is empty
 		{
-			Node* tmp = ar->redge->right;
+			Node* tmp = ar->redge->right; // used to be cur->redge->right
 			tmp->left = ar;
 			ar->parent = tmp;
 			up_balance(tmp);
@@ -658,7 +629,6 @@ void AVL:: del(CircEvent* evt)
 	Node* al = cur->ledge->left;
 	Node* ar = cur->redge->right;
 	// pointer to the pointer to cur
-	Node** upper = get_upper(cur);
 	Edge*  nedge = new Edge(al->arc, ar->arc, evt);
 	// list
 	al->redge = nedge;
@@ -677,7 +647,7 @@ void AVL:: del(CircEvent* evt)
 	if (newevt->valid) { events->push(newevt); }
 	else { delete newevt; }
 	//tree
-	_del(upper);
+	_del(get_upper(cur));
 }
 void AVL:: _del(Node** cur)
 {
@@ -713,5 +683,57 @@ void AVL:: _del(Node** cur)
 		swap_nodes(todel, rightv);
 		_del(get_upper(todel));		
 	}
+}
+void AVL::post_process()
+{
+	Node* cur = *root;
+	while (cur->left)
+	{
+		cur = cur->left;
+	}
+	// now cur->ledge == nullptr
+	if (!cur->redge)
+		// unit arc
+	{
+		return;
+	}
+	Edge* edg = cur->redge;
+	cur->arc->face->add(((edg->edge) * 1000).end);
+	// also considering a case of just two arcs
+	cur = cur->redge->right;
+	while (cur->redge)
+	{
+		edg = cur->ledge;
+		cur->arc->face->add(((edg->edge) * 1000).end);
+		edg = cur->redge;
+		cur->arc->face->add(((edg->edge) * 1000).end);
+		cur = cur->redge->right;
+	}
+	// now cur->redge == nullptr
+	edg = cur->ledge;
+	cur->arc->face->add(((edg->edge) * 1000).end);
+}
+AVL:: ~AVL()
+{
+	Node* cur = *root;
+	while (cur->left)
+	{
+		cur = cur->left;
+	}
+	// now cur->ledge == 0
+	if (!cur->redge)
+	{
+		delete cur;
+		return;
+	}
+	Node* tmp = cur;
+	while (cur->redge)
+	{
+		cur = cur->redge->right;
+		cur->ledge = nullptr; // cur->ledge == tmp->redge
+		delete tmp;
+		tmp = cur;
+	}
+	delete tmp;
 }
 ///////////////	############### \\\\\\\\\\\\\\\
