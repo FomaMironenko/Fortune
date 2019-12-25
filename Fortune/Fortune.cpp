@@ -37,6 +37,16 @@ struct Beachline
 		tree->del(evt);
 	}
 
+	void post_process()
+	{
+		tree->post_process();
+	}
+
+	~Beachline()
+	{
+		delete tree;
+	}
+
 
 	AVL* tree;
 	myq* events;
@@ -55,14 +65,14 @@ void set_diagram(Diagram & voronoy)
 	Event *cur, *tmp;
 	cur = events.top();
 	events.pop();
-	Beachline bl(&events, (SiteEvent*)cur);
+	Beachline* beachline = new Beachline(&events, (SiteEvent*)cur);
 	tmp = cur;
 	// by now all of the events are SiteEvents
 	// processing case of multi upper points
 	while (!events.empty() && (cur = (SiteEvent*)events.top())->y == tmp->y)
 	{
 		// tmp->vertex - previous vertex
-		bl.preprocess(tmp->vertex, (SiteEvent*)cur);
+		beachline->preprocess(tmp->vertex, (SiteEvent*)cur);
 		events.pop();
 		delete tmp;
 		tmp = cur;
@@ -78,17 +88,18 @@ void set_diagram(Diagram & voronoy)
 			//cur->vertex.print();
 			if (cur->tp == site)
 			{
-				bl.process_site((SiteEvent*)cur);
+				beachline->process_site((SiteEvent*)cur);
 			}
 			else
 			{
-				bl.process_circ((CircEvent*)cur);
+				beachline->process_circ((CircEvent*)cur);
 			}
 		}
 		delete cur;
 	}
 
-	//PROCESS THE EVENTS LEFT IN THE QUEUE
+	beachline->post_process();
+	delete beachline;
 }
 
 
@@ -123,7 +134,27 @@ Segment(point, dir)
 8 0
 2 -2
 
+0 0
+2 2
+-2 2
+0 4
 
+0 0
+4 4
+-4 4
+0 2
+
+0 0
+-2 0
+2 0
+1 1
+-1 1
+
+0 0
+2 2
+-2 2
+0 3
+0 5
 
 8 3
 5 6
@@ -135,13 +166,9 @@ Segment(point, dir)
 3 3
 -5 2
 
-2 1
-1 2
--1 2
--2 1
--2 -1
--1 -2
-1 -2
-2 -1
-
+2 3
+1 4
+0 -1
+-3 -5
+0 0
 */
