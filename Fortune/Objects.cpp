@@ -5,14 +5,14 @@
 #include "objects.h"
 
 
-//сначала будет идти ev2
+// ev2 first
 bool Comp:: operator() (Event* ev1, Event* ev2) { return *ev1 > *ev2; }
 
 
 
 pair<MyDouble, MyDouble> solve_square(MyDouble a, MyDouble b, MyDouble c)
 {
-	if (a == 0)
+	if (a == NILL)
 	{
 		// not considered: b == 0
 		return pair<MyDouble, MyDouble>(-c/b, -c/b);
@@ -69,7 +69,7 @@ MyDouble Arc:: of(MyDouble x, MyDouble sweep)
 	{
 		return sweep;
 	}
-	return (x - xf)*(x - xf)/(2*(yf - sweep)) + (yf + sweep)/2;
+	return (x - xf)*(x - xf)/(2*(yf - sweep)) + (yf + sweep)/2.0;
 }
 ///////////////	############### \\\\\\\\\\\\\\\
 
@@ -85,21 +85,24 @@ Edge:: Edge(Segment guide) : inters(vector<CircEvent*>(0)), left(nullptr), right
 Edge:: Edge(Arc* left, Arc* right, CircEvent* evt): inters(vector<CircEvent*>(0)), left(nullptr), right(nullptr)
 {
 	MyDouble sweep = evt->y;
-	pair<MyDouble, MyDouble> options = left->intersection(*right, sweep);
 	Point pnt;
-	if (evt->vertex.x() == options.first)
+	// they can't lay on the sweep both
+	// evt->vertex is actually an intersection point
+	if (left->face->centre.y() != sweep)
 	{
-		pnt = Point(options.first, left->of(options.first, sweep));
+		pnt = Point(evt->vertex.x(), left->of(evt->vertex.x(), sweep));
 	}
 	else
 	{
-		pnt = Point(options.second, left->of(options.second, sweep));
+		pnt = Point(evt->vertex.x(), right->of(evt->vertex.x(), sweep));
 	}
 	// a perpendicular line
 	Line perp(pnt, Segment(left->face->centre, right->face->centre));
-	if (perp.a == 0)
+	if (perp.a == NILL)
+		// case when points corresponding to *left and *right lays on same vertical
 	{
-		if (pnt.x() > left->face->centre.x())
+		if (pnt.x() > evt->arcnode->arc->face->centre.x())
+			// it's obveous after drawing a picture
 		{
 			this->edge = Segment(pnt.x(), pnt.y(), pnt.x() + 1.0, pnt.y());
 			return;
@@ -113,7 +116,6 @@ Edge:: Edge(Arc* left, Arc* right, CircEvent* evt): inters(vector<CircEvent*>(0)
 	// a horisontal line
 	Line checker(Point(pnt.x(), pnt.y() - 1.0), Point(pnt.x() + 1.0, pnt.y() - 1.0));
 	edge = Segment(pnt, perp.intersection(checker));
-	edge = edge.normalise();
 }
 void Edge:: unvalidate()
 {
@@ -159,6 +161,10 @@ void Locus::print()
 	}
 	cout << endl;
 }
+Locus:: ~Locus()
+{
+	vertexes.clear();
+}
 ///////////////	############### \\\\\\\\\\\\\\\
 
 
@@ -198,6 +204,13 @@ void Diagram:: print()
 		cout << endl;
 	}
 }
+Diagram:: ~Diagram()
+{
+	for (auto it = faces.begin(); it < faces.end(); it++)
+	{
+		delete *it;
+	}
+}
 ///////////////	############### \\\\\\\\\\\\\\\
 
 
@@ -205,14 +218,28 @@ void Diagram:: print()
 
 ///////////////		  EVENT	    \\\\\\\\\\\\\\\
 
-bool Event:: operator==(Event & other) { return this->y == other.y && this->vertex == other.vertex; }
-bool Event:: operator <(Event & other) { return this->y > other.y || this->y == other.y && this->vertex < other.vertex; }
-bool Event:: operator >(Event & other) { return this->y < other.y || this->y == other.y && this->vertex > other.vertex; }
+bool Event:: operator==(Event & other) { return this->y == other.y && this->vertex == other.vertex && this->tp == other.tp; }
+
+bool Event:: operator <(Event & other) { return this->y > other.y || (this->y == other.y && this->tp > other.tp) || (this->y == other.y && this->vertex.x() < other.vertex.x()); }
+bool Event:: operator >(Event & other) { return this->y < other.y || (this->y == other.y && this->tp < other.tp) || (this->y == other.y && this->vertex.x() > other.vertex.x()); }
 bool Event:: operator>=(Event & other) { return !(*this < other); }
 bool Event:: operator<=(Event & other) { return !(*this > other); }
-// check case when cur is the ultimate arc
-bool Event:: operator <(Node* cur) { return cur->left != nullptr && this->vertex.x() < cur->arc->left_inter(*cur->left->arc, this->y); }
-bool Event:: operator >(Node* cur) { return cur->right != nullptr && this->vertex.x() > cur->arc->right_inter(*cur->right->arc, this->y); }
+bool Event:: operator <(Node* cur) 
+{
+	if (cur->ledge == nullptr)
+	{
+		return false;
+	}
+	return this->vertex.x() < cur->left_end(y);
+}
+bool Event:: operator >(Node* cur) 
+{ 
+	if (cur->redge == nullptr)
+	{
+		return false;
+	}
+	return this->vertex.x() > cur->right_end(y);
+}
 bool Event:: operator==(Node* cur) { return !(*this < cur) && !(*this > cur); }
 ///////////////	############### \\\\\\\\\\\\\\\
 
@@ -252,9 +279,17 @@ CircEvent::CircEvent(Node* arcnd): Event()
 		return;
 	}
 	Point inter = lleft.intersection(lright);
+	Segment tmp(arcnd->arc->face->centre, inter);
+	y = inter.y() - tmp.len();
+	MyDouble xl = arcnd->left_end(y);
+	MyDouble xr = arcnd->right_end(y);
+	// defering vectors from ends of the arc
+	eleft  = Point(xl, arcnd->arc->of(xl, y)) >> eleft;
+	eright = Point(xr, arcnd->arc->of(xr, y)) >> eright;
 	Segment ldir(eleft.start, inter);
 	Segment rdir(eright.start, inter);
-	if (eleft*ldir < 0 || eright*rdir < 0)
+	// when their starts coinsides it's better understanding when drawing a picture
+	if (eleft*ldir < NILL || eright*rdir < NILL || eleft.start == eright.start && (eleft ^ eright) >= NILL)
 	{
 		valid = false;
 		return;
@@ -263,8 +298,6 @@ CircEvent::CircEvent(Node* arcnd): Event()
 	arcnode = arcnd;
 	arcnode->ledge->inters.push_back(this);
 	arcnode->redge->inters.push_back(this);
-	Segment tmp(arcnode->arc->face->centre, inter);
-	y = inter.y() - tmp.len();
 }
 ///////////////	############### \\\\\\\\\\\\\\\
 
@@ -362,7 +395,49 @@ Segment Node:: tangent(MyDouble x, MyDouble sweep)
 	Point   pnt = Point(x, arc->of(x, sweep));
 	// plusing the derivative vector
 	Segment ans = Segment(pnt.x(), pnt.y(), pnt.x() + 1.0, pnt.y() + (x - xf) / (yf - sweep));
-	return ans.normalise();
+	//return ans.normalise();
+	return ans;
+}
+MyDouble Node:: left_end(MyDouble sweep)
+{
+	Node* lft = this->ledge->left;
+	if (this->arc->face->centre.y() == sweep)
+	{
+		return this->arc->face->centre.x();
+	}
+	if (lft->arc->face->centre.y() == sweep)
+	{
+		return lft->arc->face->centre.x();
+	}
+
+	pair<MyDouble, MyDouble> inters = this->arc->intersection(*lft->arc, sweep);
+	Segment tanths = this->tangent(inters.first, sweep);
+	Segment tanlft =  lft->tangent(inters.first, sweep);
+	if ((tanths ^ tanlft) >= NILL)
+	{
+		return inters.first;
+	}
+	return inters.second;
+}
+MyDouble Node:: right_end(MyDouble sweep)
+{
+	Node* rht = this->redge->right;
+	if (this->arc->face->centre.y() == sweep)
+	{
+		return this->arc->face->centre.x();
+	}
+	if (rht->arc->face->centre.y() == sweep)
+	{
+		return rht->arc->face->centre.x();
+	}
+	pair<MyDouble, MyDouble> inters = this->arc->intersection(*rht->arc, sweep);
+	Segment tanths = this->tangent(inters.second, sweep);
+	Segment tanrht =  rht->tangent(inters.second, sweep);
+	if ((tanths ^ tanrht) <= NILL)
+	{
+		return inters.second;
+	}
+	return inters.first;
 }
 ///////////////	############### \\\\\\\\\\\\\\\
 
@@ -442,49 +517,7 @@ void AVL:: up_balance(Node* cur)
 	(*upper)->height = (*upper)->corr_height();
 	up_balance((*upper)->parent);
 }
-void AVL:: swap_nodes(Node** cur, Node** rightv)
-{ 
-	Node* tmp;
-	tmp = (*cur)->left;
-	(*cur)->left = (*rightv)->left;
-	(*rightv)->left = tmp;
-
-	if (*rightv != (*cur)->right)
-	{
-		tmp = (*cur)->right;
-	}
-	else
-	{
-		tmp = (*cur);
-	}
-	(*cur)->right = (*rightv)->right;
-	(*rightv)->right = tmp;
-
-	if (*rightv != (*cur)->right)
-	{
-		tmp = (*rightv)->parent;
-	}
-	else
-	{
-		tmp = *rightv;
-	}
-	(*rightv)->parent = (*cur)->parent;
-	(*cur)->parent = tmp;
-
-	if (*rightv != (*cur)->right)
-	{
-		tmp = *cur;  // parent's pointers
-	}
-	else
-	{
-		tmp = (*cur)->right;
-	}
-	*cur = *rightv;
-	*rightv = tmp;
-}
-
-
-void AVL:: swap_nodes2(Node* cur, Node* rightv)
+void AVL:: swap_nodes(Node* cur, Node* rightv)
 	// to swap:  (1) ->left, (2) ->right, (3) ->parent, (4) ->left->parent, (5) ->right->parent, (6) *upper 
 {
 	if (cur->right == rightv)
@@ -557,7 +590,7 @@ void AVL:: _insert(Node* cur, SiteEvent* evt)
 	}
 	else
 	{
-		// a normalised tangent vector to the arc
+		// a tangent vector to the arc
 		Segment vr = cur->tangent(evt->vertex.x(), evt->y);
 		Segment vl = -vr;
 		// list
@@ -630,7 +663,7 @@ void AVL:: del(CircEvent* evt)
 	// list
 	al->redge = nedge;
 	nedge->left = al;
-	ar->ledge = nedge; 
+	ar->ledge = nedge;
 	nedge->right = ar;
 	// adding the vertex to the diagram
 	cur->arc->face->add(evt->vertex);
@@ -677,7 +710,7 @@ void AVL:: _del(Node** cur)
 		//(*cur)->swap_list_fields(rightv);
 		//Node** tmpup = get_upper(rightv);
 		//_del(tmpup);
-		swap_nodes2(todel, rightv);
+		swap_nodes(todel, rightv);
 		_del(get_upper(todel));		
 	}
 }
