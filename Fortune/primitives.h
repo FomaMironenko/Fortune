@@ -7,10 +7,10 @@
 #include <algorithm>
 #include <vector>
 
-
 using namespace std;
 
 
+#define NILL MyDouble(0)
 struct Segment;
 struct Point;
 struct Line;
@@ -57,15 +57,20 @@ struct MyDouble
 	MyDouble operator -();
 	MyDouble operator -(double);
 	MyDouble operator-=(double);
-
-	bool operator==(MyDouble &);
-	bool operator<=(MyDouble &);
-	bool operator>=(MyDouble &);
-	bool operator <(MyDouble &);
-	bool operator >(MyDouble &);
+	MyDouble operator *(double);
+	MyDouble operator*=(double);
+	MyDouble operator /(double);
+	MyDouble operator/=(double);
+	bool operator==(MyDouble);
+	bool operator<=(MyDouble);
+	bool operator>=(MyDouble);
+	bool operator <(MyDouble);
+	bool operator >(MyDouble);
 
 	friend istream& operator>>(istream&, MyDouble&);
 	friend ostream& operator<<(ostream&, MyDouble&);
+
+	~MyDouble(){}
 
 	const double eps = 1e-5;
 	double value;
