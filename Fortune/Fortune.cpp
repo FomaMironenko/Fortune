@@ -2,6 +2,7 @@
 #include <iostream>
 #include <queue>
 #include <set>
+#include <system_error>
 
 #include "primitives.h"
 #include "objects.h"
@@ -22,7 +23,7 @@ struct Beachline
 	{
 		Point cur = evt->face->centre;
 		// prev.y() == cur.y() == evt->y
-		Segment tmp((prev.x() + cur.x()) / 2, prev.y(), (prev.x() + cur.x()) / 2, prev.y() - 1.0);
+		Segment tmp((prev.x() + cur.x()) / 2.0, prev.y(), (prev.x() + cur.x()) / 2.0, prev.y() - 1.0);
 		tree->insert_right(tmp, evt);
 	}
 
@@ -97,6 +98,8 @@ int main()
 	Diagram voronoy;
 	set_diagram(voronoy);
 	voronoy.print();
+
+	return EXIT_SUCCESS;
 }
 
 /*
@@ -129,13 +132,16 @@ Segment(point, dir)
 7 1
 -3 -2
 1 4
-
 3 3
 -5 2
 
+2 1
+1 2
+-1 2
+-2 1
+-2 -1
+-1 -2
+1 -2
+2 -1
 
-if (Point(6.5, -5.5) == inter)
-	{
-		int a = 2 / (int(!bool(&inter)) & int(!bool(&arcnd)));
-	}
 */
