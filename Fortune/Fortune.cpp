@@ -1,6 +1,8 @@
 #include "pch.h"
+
 #include "primitives.h"
 #include "objects.h"
+#include <GL/glut.h>
 
 
 
@@ -8,8 +10,8 @@ struct Beachline
 {
 	Beachline()
 	{	}
-	Beachline(myq* evts, SiteEvent* first): events(evts)
-	{	
+	Beachline(myq* evts, SiteEvent* first) : events(evts)
+	{
 		tree = new AVL(first, events);
 	}
 
@@ -50,12 +52,10 @@ struct Beachline
 
 
 // Fortune algorithm
-void set_diagram(Diagram & voronoy)
+void set_diagram(Diagram & voronoy, myq & events)
 {
-	Comp cmp;
-	myq events;
 	//adds SiteEvents
-	voronoy.get(events);
+	//voronoy.get(events);
 
 	Event *cur, *tmp;
 	cur = events.top();
@@ -99,23 +99,134 @@ void set_diagram(Diagram & voronoy)
 
 
 
-int main()
+
+
+Diagram voronoy;
+myq events;
+
+const float windowSize = 600.0;
+int X = -20;
+int Y = -20;
+
+
+
+
+
+//////////// Graphics ////////////
+
+void Initialize()
 {
-	Diagram voronoy;
-	set_diagram(voronoy);
-	voronoy.print();
+	glClearColor(0, 0, 0, 1.0);
+
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glOrtho(0.0, windowSize, windowSize, 0.0, 0.0, 1.0);
+	glFlush();
+}
+
+void ext(unsigned char key, int x, int y)
+{
+	if ((int)key == 13)
+	{
+		set_diagram(voronoy, events);
+		voronoy.print();
+		for (auto it = voronoy.faces.begin(); it < voronoy.faces.end(); it++)
+		{
+			Polygon tmp;
+			tmp.convex_hull((*it)->vertexes);
+			glColor3f(0.4, 0, 0.9);
+			glBegin(GL_LINE_LOOP);
+			for (int i = 0; i < tmp.n; i++)
+			{
+				glVertex3d(tmp.points[i].x(), tmp.points[i].y(), 0);
+			}
+			glEnd();
+		}
+
+		glFlush();
+	}
+}
+
+void get_points(int button, int state, int x, int y)
+{
+	if (button == GLUT_LEFT_BUTTON && state == GLUT_UP)
+	{
+		X = x;
+		Y = y;
+	}
+	glutPostRedisplay();
+}
+
+void renderBitmapString(float x, float y, float z, void *font, const char *string) {
+
+	const char *c;
+	glRasterPos3f(x, y, z);
+	for (c = string; *c != '\0'; c++) {
+		glutBitmapCharacter(font, *c);
+	}
+}
+
+void Draw()
+{
+	// first point: (-20, -20)
+	if (X < 0 || Y < 0)
+	{
+		glColor3f(1, 1, 1);
+		renderBitmapString(5, 30, 0, GLUT_BITMAP_HELVETICA_18, "Click. When finish, press 'Enter'");
+		glFlush();
+	}
+	glColor3f(0.4, 0, 0.9);
+	glPointSize(10);
+	glBegin(GL_POINTS);
+	glVertex3i(X, Y, 0);
+	glEnd();
+
+	Point pnt(X, Y);
+	if (X < 0 || Y < 0)
+	{
+		return;
+	}
+	if (voronoy.faces.empty() || pnt != voronoy.faces.back()->centre)
+	{
+		voronoy.add(events, pnt);
+	}
+
+	glFlush();
+}
+
+
+int main(int argc, char **argv)
+{
+	glutInit(&argc, argv);
+	glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
+	glutInitWindowSize(windowSize, windowSize);
+	glutInitWindowPosition(100, 100);	
+	glutCreateWindow("Fortune");
+
+	Initialize();
+	glutDisplayFunc(Draw);
+	glutKeyboardFunc(ext);
+	glutMouseFunc(get_points);
+
+	glutMainLoop();
+
+	//Diagram voronoy;
+	//set_diagram(voronoy);
+	//voronoy.print();
 
 	return EXIT_SUCCESS;
 }
 
+
+
 /*
 1) При добавлении SiteEvent события если х координата точки совпадает с
 х координатой пересечения каих-то двух параболических дуг,
-то эта точка пересечения - новая вершина диаграмы. Можно не выделять этот 
+то эта точка пересечения - новая вершина диаграмы. Можно не выделять этот
 случай в отдельный
 
 2) Направление нового ребра (2х рёбер) - касательная к
-параболе в точке дуги с х координатой новой точки 
+параболе в точке дуги с х координатой новой точки
 Segment(point, dir)
 
 3) События-удаления вычисляются во время события-вставки. y координата события-
