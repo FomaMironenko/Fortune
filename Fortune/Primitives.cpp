@@ -13,9 +13,9 @@ int GCD(int a, int b)
 
 ///////////////////        RATIONAL       \\\\\\\\\\\\\\\\\\\\
 
-rational:: rational() : nom(0), den(1)
+rational::rational() : nom(0), den(1)
 {	}
-rational:: rational(int n, int d)
+rational::rational(int n, int d)
 {
 	int tmp = GCD(n, d);
 	nom = n / tmp;
@@ -26,7 +26,7 @@ rational:: rational(int n, int d)
 		nom = -nom;
 	}
 }
-void rational:: get_int()
+void rational::get_int()
 {
 	cin >> this->nom;
 	this->den = 1;
@@ -56,7 +56,7 @@ rational rational:: operator /(const rational & other) const
 }
 rational rational:: operator/=(const rational & other) { return *this = *this / other; }
 
-void rational:: print()
+void rational::print()
 {
 	if (den != 1)
 		cout << nom << "/" << den;
@@ -70,9 +70,9 @@ void rational:: print()
 
 ///////////////////       MY DOUBLE      \\\\\\\\\\\\\\\\\\\\
 
-MyDouble:: MyDouble() : value(0)
+MyDouble::MyDouble() : value(0)
 {	}
-MyDouble:: MyDouble(double x)
+MyDouble::MyDouble(double x)
 {
 	value = x;
 }
@@ -88,8 +88,9 @@ MyDouble MyDouble:: operator *(double other) { return MyDouble(this->value * oth
 MyDouble MyDouble:: operator*=(double other) { return *this = *this * other; }
 MyDouble MyDouble:: operator /(double other) { return MyDouble(this->value / other); }
 MyDouble MyDouble:: operator/=(double other) { return *this = *this / other; }
-bool MyDouble:: operator==(MyDouble other) { 
-	return abs(*this - (double)other) < eps; }
+bool MyDouble:: operator==(MyDouble other) {
+	return abs(*this - (double)other) < eps;
+}
 bool MyDouble:: operator<=(MyDouble other) { return this->value < other.value + eps; }
 bool MyDouble:: operator>=(MyDouble other) { return this->value > other.value - eps; }
 bool MyDouble:: operator <(MyDouble other) { return this->value < other.value - eps; }
@@ -112,15 +113,15 @@ ostream & operator<<(ostream & cout, MyDouble & num)
 
 ////////////////////       SEGMENT        \\\\\\\\\\\\\\\\\\\\
 
-Segment:: Segment() : start(pair<MyDouble, MyDouble>(0, 0)), end(pair<MyDouble, MyDouble>(0, 0))
+Segment::Segment() : start(pair<MyDouble, MyDouble>(0, 0)), end(pair<MyDouble, MyDouble>(0, 0))
 {	}
-Segment:: Segment(MyDouble x1, MyDouble y1, MyDouble x2, MyDouble y2) : start(pair<MyDouble, MyDouble>(x1, y1)), end(pair<MyDouble, MyDouble>(x2, y2))
+Segment::Segment(MyDouble x1, MyDouble y1, MyDouble x2, MyDouble y2) : start(pair<MyDouble, MyDouble>(x1, y1)), end(pair<MyDouble, MyDouble>(x2, y2))
 {	}
-Segment:: Segment(pair<MyDouble, MyDouble> start, pair<MyDouble, MyDouble> end) : start(start), end(end)
+Segment::Segment(pair<MyDouble, MyDouble> start, pair<MyDouble, MyDouble> end) : start(start), end(end)
 {	}
-Segment:: Segment(Point st, Point en): start(st.end), end(en.end)
+Segment::Segment(Point st, Point en) : start(st.end), end(en.end)
 {	}
-Segment:: Segment(Segment const & other): start(other.start), end(other.end)
+Segment::Segment(Segment const & other) : start(other.start), end(other.end)
 {	}
 Segment & Segment:: operator=(Segment other)
 {
@@ -128,8 +129,8 @@ Segment & Segment:: operator=(Segment other)
 	this->end = other.end;
 	return *this;
 }
-MyDouble Segment:: x_project() { return end.first - start.first; }
-MyDouble Segment:: y_project() { return end.second - start.second; }
+MyDouble Segment::x_project() { return end.first - start.first; }
+MyDouble Segment::y_project() { return end.second - start.second; }
 Segment Segment:: operator +(Segment other) { return Segment(start, pair<MyDouble, MyDouble>(end.first + other.x_project(), end.second + other.y_project())); }
 Segment Segment:: operator+=(Segment other) { return *this = *this + other; }
 Segment Segment:: operator -() { return Segment(start, pair<MyDouble, MyDouble>(start.first - x_project(), start.second - y_project())); }
@@ -146,20 +147,20 @@ MyDouble Segment::len()
 {
 	return MyDouble(sqrt((double)x_project()*(double)x_project() + (double)y_project()*(double)y_project()));
 }
-void Segment:: print()
+void Segment::print()
 {
 	cout << "[(" << start.first << ", " << start.second << "),  (" <<
 		end.first << ", " << end.second << ")] ";
 }
-bool Segment:: between(Point pnt)
+bool Segment::between(Point pnt)
 {
 	return ((*this)*(Point(start) - pnt)) <= NILL && ((*this)*(Point(end) - pnt)) >= NILL;
 }
-bool Segment:: contain(Point pnt)
+bool Segment::contain(Point pnt)
 {
 	return this->between(pnt) && ((Point(start) - pnt) ^ (Point(end) - pnt)) == NILL;
 }
-bool Segment:: cross(Segment other)
+bool Segment::cross(Segment other)
 {
 	Line l1(other);
 	Line l2(*this);
@@ -174,9 +175,9 @@ bool Segment:: cross(Segment other)
 	Point a = (l1.intersection(l2));
 	return this->between(a) && other.between(a);
 }
-Segment Segment:: normalise()
+Segment Segment::normalise()
 {
-	return Segment(start, pair<MyDouble, MyDouble>(start.first + x_project()/len(), start.second + y_project()/len()));
+	return Segment(start, pair<MyDouble, MyDouble>(start.first + x_project() / len(), start.second + y_project() / len()));
 }
 //////////////////// ################### \\\\\\\\\\\\\\\\\\\\
 
@@ -185,26 +186,27 @@ Segment Segment:: normalise()
 
 ////////////////////        POINT        \\\\\\\\\\\\\\\\\\\\
 
-Point:: Point() : Segment()
+Point::Point() : Segment()
 {	}
-Point:: Point(pair<MyDouble, MyDouble> pnt) : Segment(0, 0, pnt.first, pnt.second)
+Point::Point(pair<MyDouble, MyDouble> pnt) : Segment(0, 0, pnt.first, pnt.second)
 {	}
-Point:: Point(MyDouble x1, MyDouble y1) : Segment(0, 0, x1, y1)
+Point::Point(MyDouble x1, MyDouble y1) : Segment(0, 0, x1, y1)
 {	}
-Point:: Point(Segment pnt) : Segment(0, 0, pnt.end.first, pnt.end.second)
+Point::Point(Segment pnt) : Segment(0, 0, pnt.end.first, pnt.end.second)
 {	}
 Point & Point:: operator=(Point other)
 {
 	this->end = other.end;
 	return *this;
 }
-void Point:: get()
+void Point::get()
 {
 	cin >> this->end.first;
 	cin >> this->end.second;
 }
 bool Point:: operator==(Point & other) {
-	return (this->end.first == other.end.first && this->end.second == other.end.second); }
+	return (this->end.first == other.end.first && this->end.second == other.end.second);
+}
 bool Point:: operator!=(Point & other) { return !(*this == other); }
 bool Point:: operator >(Point & other) { return (this->end.second < other.end.second || (this->end.second == other.end.second && this->end.first > other.end.first)); }
 bool Point:: operator <(Point & other) { return (this->end.second > other.end.second || (this->end.second == other.end.second && this->end.first < other.end.first)); }
@@ -213,7 +215,7 @@ bool Point:: operator<=(Point & other) { return !(*this > other); }
 //builds a vector from the point
 Segment Point:: operator >>(Segment other) { return Segment(this->end, pair<MyDouble, MyDouble>(this->end.first + other.x_project(), this->end.second + other.y_project())); }
 Segment Point:: operator <<(Segment other) { return Segment(this->end, pair<MyDouble, MyDouble>(this->end.first - other.x_project(), this->end.second - other.y_project())); }
-void Point:: print(bool nice)
+void Point::print(bool nice)
 {
 	if (nice)
 	{
@@ -231,12 +233,12 @@ void Point:: print(bool nice)
 		cout << this->end.first << " " << this->end.second;
 	}
 }
-MyDouble Point:: polar_ang(Point p1, Point p2) { return (p1 - *this) ^ (p2 - *this); }
-MyDouble & Point:: x()
+MyDouble Point::polar_ang(Point p1, Point p2) { return (p1 - *this) ^ (p2 - *this); }
+MyDouble & Point::x()
 {
 	return this->end.first;
 }
-MyDouble & Point:: y()
+MyDouble & Point::y()
 {
 	return this->end.second;
 }
@@ -246,6 +248,11 @@ istream & operator>>(istream & cin, Point & pnt)
 	pnt.start.first = pnt.start.second = 0;
 	return cin;
 }
+ostream & operator<<(ostream & cout, Point & pnt)
+{
+	pnt.print(true);
+	return cout;
+}
 //////////////////// ################### \\\\\\\\\\\\\\\\\\\\
 
 
@@ -253,14 +260,14 @@ istream & operator>>(istream & cin, Point & pnt)
 
 ////////////////////         LINE        \\\\\\\\\\\\\\\\\\\\
 
-Line:: Line(Segment guide)
+Line::Line(Segment guide)
 {
 	pnt = Point(guide.start.first, guide.start.second);
 	a = guide.y_project();
 	b = -guide.x_project();
 	c = guide.x_project() * guide.start.second - guide.y_project() * guide.start.first;
 }
-Line:: Line(Point st, Point en)
+Line::Line(Point st, Point en)
 {
 	pnt = st;
 	if (st == en)
@@ -272,7 +279,7 @@ Line:: Line(Point st, Point en)
 		*this = Line(Segment(st, en));
 	}
 }
-Line:: Line(Point st, Segment normal)
+Line::Line(Point st, Segment normal)
 {
 	pnt = st;
 	a = normal.x_project();
@@ -280,7 +287,7 @@ Line:: Line(Point st, Segment normal)
 	c = -a * st.end.first - b * st.end.second;
 }
 MyDouble Line:: operator()(Point pnt) { return a * pnt.end.first + b * pnt.end.second + c; }
-Point Line:: intersection(Line other)
+Point Line::intersection(Line other)
 {
 	MyDouble det = a * other.b - b * other.a;
 	if (det == MyDouble(0))
@@ -294,7 +301,7 @@ Point Line:: intersection(Line other)
 	Point tmp((other.c*b - c * other.b) / det, (other.a*c - a * other.c) / det);
 	return tmp;
 }
-int Line:: parallel(Line other)
+int Line::parallel(Line other)
 {
 	return a * other.b == b * other.a;
 }
@@ -305,12 +312,12 @@ int Line:: parallel(Line other)
 
 ////////////////////       POLYGON       \\\\\\\\\\\\\\\\\\\\
 
-Polygon:: Polygon() : points(vector<Point>(0)), n(0)
+Polygon::Polygon() : points(vector<Point>(0)), n(0)
 {	}
 //should be in correct order
-Polygon:: Polygon(vector<Point> pnts) : points(pnts), n(pnts.size())
+Polygon::Polygon(vector<Point> pnts) : points(pnts), n(pnts.size())
 {	}
-Polygon:: Polygon(int n) : n(n)
+Polygon::Polygon(int n) : n(n)
 {
 	points = vector<Point>(n);
 	for (int i = 0; i < n; i++)
@@ -328,18 +335,17 @@ bool Polygon::Comp:: operator()(Point & p1, Point & p2)
 	return origin.polar_ang(p1, p2) > NILL || (origin.polar_ang(p1, p2) == NILL && (p1 - origin)*(p1 - p2) <= NILL);
 }
 
-void Polygon::convex_hull()
+void Polygon::convex_hull(vector<Point> bucket)
 {
-	int n;
-	cin >> n;
-	vector<Point> bucket(n);
-	bucket[0].get();
+	int n = bucket.size();
+	if (n == 0)
+	{
+		return;
+	}
 	Point origin;
 	origin = bucket[0];
-	//also defines the lowest left point
 	for (int i = 1; i < n; i++)
 	{
-		bucket[i].get();
 		if (bucket[i] < origin)
 		{
 			origin = bucket[i];
@@ -369,6 +375,7 @@ void Polygon::convex_hull()
 		}
 		points.push_back(*it);
 	}
+	this->n = points.size();
 	return;
 }
 
