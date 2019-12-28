@@ -68,7 +68,7 @@ struct MyDouble
 	friend istream& operator>>(istream&, MyDouble&);
 	friend ostream& operator<<(ostream&, MyDouble&);
 
-	~MyDouble(){}
+	~MyDouble() {}
 
 	const double eps = 1e-5;
 	double value;
@@ -121,10 +121,10 @@ struct Point : Segment
 	void get();
 
 	bool operator==(Point &);
-	bool operator!=(Point &); 
-	bool operator >(Point &); 
-	bool operator <(Point &); 
-	bool operator>=(Point &); 
+	bool operator!=(Point &);
+	bool operator >(Point &);
+	bool operator <(Point &);
+	bool operator>=(Point &);
 	bool operator<=(Point &);
 
 	Segment operator >>(Segment);
@@ -134,6 +134,7 @@ struct Point : Segment
 	MyDouble & x();
 	MyDouble & y();
 	friend istream& operator>>(istream&, Point&);
+	friend ostream& operator<<(ostream&, Point&);
 };
 
 struct Line
@@ -169,7 +170,7 @@ struct Polygon
 		bool operator()(Point &, Point &);
 		Point origin;
 	};
-	void convex_hull();
+	void convex_hull(vector<Point>);
 	void print();
 	int n;
 	vector<Point> points;
