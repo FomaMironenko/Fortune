@@ -24,7 +24,7 @@ struct Comp
 	bool operator()(Event*, Event*);
 };
 typedef priority_queue<Event*, vector<Event*>, Comp> myq;
- 
+
 
 pair<MyDouble, MyDouble> solve_square(MyDouble, MyDouble, MyDouble);
 
@@ -57,7 +57,7 @@ struct Arc
 
 struct Edge
 {
-	Edge(): inters(vector<CircEvent*>(0))
+	Edge() : inters(vector<CircEvent*>(0))
 	{	 }
 	Edge(Segment guide);
 	Edge(Arc* left, Arc* right, CircEvent* evt);
@@ -80,7 +80,7 @@ struct Edge
 
 struct Locus
 {
-	Locus(): centre(Point(0, 0))
+	Locus() : centre(Point(0, 0))
 	{	}
 
 	void add(Point pnt);
@@ -95,12 +95,13 @@ struct Locus
 
 struct Diagram
 {
-	Diagram(): n(0) {    };
+	Diagram() : n(0), faces(vector<Locus*>(0)) {    };
 	Diagram(int n);
 
 	void get(myq & Q);
+	void add(myq & Q, Point tmp);
 	void print();
-	
+
 	~Diagram();
 
 	int n;
@@ -110,14 +111,14 @@ struct Diagram
 
 
 
-enum type{site, circ};
+enum type { site, circ };
 
 struct Event
 {
-	Event(): valid(true)
+	Event() : valid(true)
 	{	}
-	Event(MyDouble y, Point pnt): y(y), valid(true)
-	{	
+	Event(MyDouble y, Point pnt) : y(y), valid(true)
+	{
 		vertex = Point(pnt.x(), pnt.y());
 	}
 
@@ -139,10 +140,14 @@ struct Event
 
 struct SiteEvent : Event
 {
-	SiteEvent(): Event()
-	{ this->tp = site; }
-	SiteEvent(MyDouble y, Point pnt): Event(y, pnt)
-	{ this->tp = site; }
+	SiteEvent() : Event()
+	{
+		this->tp = site;
+	}
+	SiteEvent(MyDouble y, Point pnt) : Event(y, pnt)
+	{
+		this->tp = site;
+	}
 	SiteEvent(Locus*);
 
 	Locus* face;
@@ -150,10 +155,14 @@ struct SiteEvent : Event
 
 struct CircEvent : Event
 {
-	CircEvent(): Event()
-	{	this->tp = circ;	}
+	CircEvent() : Event()
+	{
+		this->tp = circ;
+	}
 	CircEvent(MyDouble y, Point pnt) : Event(y, pnt)
-	{	this->tp = circ;	}
+	{
+		this->tp = circ;
+	}
 	CircEvent(Node*);
 
 	Node* arcnode;
@@ -163,7 +172,7 @@ struct CircEvent : Event
 // beachline struct //
 struct Node
 {
-	Node(): parent(nullptr), ledge(nullptr), redge(nullptr), left(nullptr), right(nullptr), height(1)
+	Node() : parent(nullptr), ledge(nullptr), redge(nullptr), left(nullptr), right(nullptr), height(1)
 	{	}
 	Node(SiteEvent* arc, Edge* ledge = nullptr, Edge* redge = nullptr);
 	Node(Locus* face, Edge* ledge = nullptr, Edge* redge = nullptr);
@@ -171,7 +180,6 @@ struct Node
 	int leftH();
 	int rightH();
 	int corr_height();
-	void swap_list_fields(Node*);
 	void set_parent(Node*);
 	Segment tangent(MyDouble, MyDouble);
 	// if this->ledge != 0
