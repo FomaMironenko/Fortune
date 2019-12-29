@@ -5,7 +5,6 @@
 #include <GL/glut.h>
 
 
-
 struct Beachline
 {
 	Beachline()
@@ -124,6 +123,33 @@ void Initialize()
 	glFlush();
 }
 
+void renderBitmapString(float x, float y, float z, void *font, const char *string)
+{
+
+	const char *c;
+	glRasterPos3f(x, y, z);
+	for (c = string; *c != '\0'; c++)
+	{
+		glutBitmapCharacter(font, *c);
+	}
+}
+
+void set_head()
+{
+	glColor3f(1, 1, 1);
+	glRectf(0, 0, windowSize, 50);
+	// frame
+	glColor3f(0.8, 0.8, 0.8);
+	glRectf(0, 0, windowSize, 5);
+	glRectf(0, 0, 5, 50);
+	glRectf(0, 45, windowSize, 50);
+	glRectf(windowSize - 5, 0, windowSize, 50);
+
+	glColor3f(0, 0, 0);
+	renderBitmapString(150, 30, 0, GLUT_BITMAP_HELVETICA_18, "Click. When finish, press 'Enter'");
+}
+
+// Process the diagram when 'enter' key pressed
 void ext(unsigned char key, int x, int y)
 {
 	if ((int)key == 13)
@@ -138,10 +164,18 @@ void ext(unsigned char key, int x, int y)
 			glBegin(GL_LINE_LOOP);
 			for (int i = 0; i < tmp.n; i++)
 			{
+				//if ((abs(tmp.points[i].x()) > 8000 || abs(tmp.points[i].y()) > 8000) &&
+				//	((abs(tmp.points[(i + 1) % tmp.n].x()) > 8000 || abs(tmp.points[(i + 1) % tmp.n].y()) > 8000)))
+				//{
+				//	continue;
+				//}
+				//glVertex3d(tmp.points[i].x(), tmp.points[i].y(), 0);
+				//glVertex3d(tmp.points[(i + 1) % tmp.n].x(), tmp.points[(i + 1) % tmp.n].y(), 0);
 				glVertex3d(tmp.points[i].x(), tmp.points[i].y(), 0);
 			}
 			glEnd();
 		}
+		set_head();
 
 		glFlush();
 	}
@@ -157,24 +191,19 @@ void get_points(int button, int state, int x, int y)
 	glutPostRedisplay();
 }
 
-void renderBitmapString(float x, float y, float z, void *font, const char *string) {
-
-	const char *c;
-	glRasterPos3f(x, y, z);
-	for (c = string; *c != '\0'; c++) {
-		glutBitmapCharacter(font, *c);
-	}
-}
-
 void Draw()
 {
 	// first point: (-20, -20)
 	if (X < 0 || Y < 0)
 	{
-		glColor3f(1, 1, 1);
-		renderBitmapString(5, 30, 0, GLUT_BITMAP_HELVETICA_18, "Click. When finish, press 'Enter'");
+		set_head();
 		glFlush();
 	}
+	if (Y <= 50)
+	{
+		return;
+	}
+
 	glColor3f(0.4, 0, 0.9);
 	glPointSize(10);
 	glBegin(GL_POINTS);
@@ -199,8 +228,8 @@ int main(int argc, char **argv)
 {
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
-	glutInitWindowSize(windowSize, windowSize);
-	glutInitWindowPosition(100, 100);	
+	glutInitWindowSize(windowSize, windowSize);		//Указываем размер окна
+	glutInitWindowPosition(100, 100);	//Позиция окна
 	glutCreateWindow("Fortune");
 
 	Initialize();
